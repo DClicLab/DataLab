@@ -90,11 +90,23 @@ export const restComponent = (endpointUrl, FormComponent) => {
       }
 
       handleValueChange = name => (event) => {
+        console.log("in handleValueChange");
+        console.log(this.state);
+        console.log(event.target);
+        console.log("data:",this.state);
+
         const { data } = this.state;
         data[name] = event.target.value;
         this.setState({ data });
       };
 
+      handleSensorChange = (index,attr) => (event, newValue) => {
+        console.log("handleSensorChange: ",event.target,newValue);
+        const { data } = this.state;
+        data["sensors"][index][attr] = event.target.value;
+        this.setState({ data });
+      };
+      
       handleSliderChange = name => (event, newValue) => {
         const { data } = this.state;
         data[name] = newValue;
@@ -112,6 +124,8 @@ export const restComponent = (endpointUrl, FormComponent) => {
           handleValueChange={this.handleValueChange}
           handleCheckboxChange={this.handleCheckboxChange}
           handleSliderChange={this.handleSliderChange}
+          handleSensorChange={this.handleSensorChange}
+
           setData={this.setData}
           saveData={this.saveData}
           loadData={this.loadData}
