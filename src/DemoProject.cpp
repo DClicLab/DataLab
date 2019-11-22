@@ -50,6 +50,7 @@ DemoProject::DemoProject(AsyncWebServer *server, FS *fs, SecurityManager *securi
 
   //test.emplace("Test sensor",&createInstance<TestSensor>);
   pinMode(BLINK_LED, OUTPUT);
+  
   memset(sensorList, 0, sizeof(sensorList));
   //set http
   server->on("/val", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -67,27 +68,30 @@ DemoProject::DemoProject(AsyncWebServer *server, FS *fs, SecurityManager *securi
 
 void DemoProject::start()
 {
+  memset(sensorList,0,sizeof(sensorList));
+  memset(ticks,0,sizeof(ticks));
+  
   Serial.println("starting conf");
   // init all sensors
   int i = 0;
   Serial.println("instanciating test sensors");
-  for (CSensor *sensorc : sensorList)
+  for (CSensorParams *sensorParams : sensorParamsList)
   {
-    Serial.println("Adding sensor...");
-    if (sensorc == NULL)
+    Serial.println("Adding sensorParams...");
+    if (sensorParams == NULL)
     {
       Serial.println("Skipping not set");
       continue;
     }
     Serial.println("Adding test, interval");
-    Serial.println(sensorc->interval);
-    Serial.println(sensorc->name);
+    Serial.println(sensorParams->interval);
+    Serial.println(sensorParams->name);
 
     //Instantiate the sensor based on the type attribute
     //TODO: Implement a sensor factory with self-registering sensors.
-    sensorList[i] = getSensor(sensorList[i]->driver,CSensorParams(sensorc->minVal, sensorc->maxVal, sensorc->enabled, sensorc->interval, sensorc->name, sensorc->unit, sensorc->driver));
+    sensorList[i] = getSensor(sensorParams->driver,*sensorParams);
     
-    ticks[i].attach<int>(sensorc->interval, getValueForSensor, i);
+    ticks[i].attach<int>(sensorParams->interval, getValueForSensor, i);
     i++;
   }
   Serial.println("Done Adding sensors");
@@ -101,6 +105,7 @@ void DemoProject::onConfigUpdated()
 void DemoProject::reconfigureTheService()
 {
   Serial.println("reconfig");
+  start();
   // do whatever is required to react to the new settings
 }
 
@@ -120,7 +125,6 @@ void DemoProject::loop()
   {
     Serial.println(queue.top());
     Serial.print("Sensor is ");
-    Serial.println(sensorList[queue.top()]->enabled);
 
     if (sensorList[queue.top()]->enabled)
     {
@@ -149,7 +153,7 @@ void DemoProject::readFromJsonObject(JsonObject &root)//create the local conf fr
   Serial.println("in read from json");
   int i = 0;
   JsonArray jsensors = root.getMember("sensors");
-  memset(sensorList,0,sizeof(sensorList));
+  memset(sensorParamsList,0,sizeof(sensorParamsList));
   //Deserializing sensors
   // deserialisation needed so that JsonBuffer is kept in memory as short as possible
   for (JsonObject jsensor : jsensors)
@@ -168,7 +172,7 @@ void DemoProject::readFromJsonObject(JsonObject &root)//create the local conf fr
     Serial.println(jsensor["unit"].as<const char *>());
     bool enabled = (jsensor["enabled"] == String("true"));
 
-    sensorList[i++] = new CSensor(jsensor["min"].as<int>(), jsensor["max"].as<int>(), enabled, jsensor["interval"].as<int>(), jsensor["name"] | "untitled", jsensor["unit"], jsensor["driver"]);
+    sensorParamsList[i++] = new CSensorParams(jsensor["min"].as<int>(), jsensor["max"].as<int>(), enabled, jsensor["interval"].as<int>(), jsensor["name"] | "untitled", jsensor["unit"], jsensor["driver"]);
   }
 }
 
@@ -190,28 +194,28 @@ void DemoProject::writeToJsonObject(JsonObject &root)
 
   JsonArray sensorJList = root.createNestedArray("sensors");
 
-  for (CSensor *sensor : sensorList)
+  for (CSensorParams *sensorParams : sensorParamsList)
   {
-    if (sensor == NULL)
+    if (sensorParams == NULL)
       continue;
     JsonObject jsensor = sensorJList.createNestedObject();
-    jsensor["min"] = sensor->minVal;
-    Serial.print("sensor->minVal: ");
-    Serial.println(sensor->minVal);
-    jsensor["max"] = sensor->maxVal;
-    Serial.print("sensor->maxVal: ");
-    Serial.println(sensor->maxVal);
-    jsensor["enabled"] = (sensor->enabled == true ? "true" : "false");
-    Serial.print("sensor->enabled: ");
-    Serial.println(sensor->enabled);
-    jsensor["interval"] = sensor->interval;
-    Serial.print("sensor->interval: ");
-    Serial.println(sensor->interval);
-    Serial.print("sensor->unit: ");
-    Serial.println(sensor->unit);
-    jsensor["name"] = sensor->name;
-    Serial.print("sensor->unit: ");
-    jsensor["unit"] = sensor->unit;
-    jsensor["driver"] = sensor->driver;
+    jsensor["min"] = sensorParams->minVal;
+    Serial.print("sensorParams->minVal: ");
+    Serial.println(sensorParams->minVal);
+    jsensor["max"] = sensorParams->maxVal;
+    Serial.print("sensorParams->maxVal: ");
+    Serial.println(sensorParams->maxVal);
+    jsensor["enabled"] = (sensorParams->enabled == true ? "true" : "false");
+    Serial.print("sensorParams->enabled: ");
+    Serial.println(sensorParams->enabled);
+    jsensor["interval"] = sensorParams->interval;
+    Serial.print("sensorParams->interval: ");
+    Serial.println(sensorParams->interval);
+    Serial.print("sensorParams->unit: ");
+    Serial.println(sensorParams->unit);
+    jsensor["name"] = sensorParams->name;
+    Serial.print("sensorParams->unit: ");
+    jsensor["unit"] = sensorParams->unit;
+    jsensor["driver"] = sensorParams->driver;
   }
 }

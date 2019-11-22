@@ -44,6 +44,7 @@ class DemoProject : public AdminSettingsService {
     void start();
     CSensor* getSensor(const char* driverName,CSensorParams params);
     CSensor* sensorList[5];
+    CSensorParams* sensorParamsList[5];
     
   private:
     //struct SensorConf _confSensorList[5];

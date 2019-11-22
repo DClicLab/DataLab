@@ -14,6 +14,7 @@ import SectionContent from '../components/SectionContent';
 import Chart from 'chart.js';
 
 export const DEMO_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "demoSettings";
+export const DEMO_SETTINGS_ENDPOINT_VAL = ENDPOINT_ROOT + "../val";
 
 const styles = theme => ({
   fileTable: {
@@ -37,7 +38,7 @@ function getData(data){
     data['Sensor data'].title = 'Sensor data';
     data['Sensor data'].data=[];
   }    
-  fetch("http://192.168.1.110/val")
+  fetch(DEMO_SETTINGS_ENDPOINT_VAL)
       .then(res => res.json())
       .then(
         (result) => {
