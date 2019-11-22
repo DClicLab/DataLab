@@ -106,7 +106,28 @@ export const restComponent = (endpointUrl, FormComponent) => {
         data["sensors"][index][attr] = event.target.value;
         this.setState({ data });
       };
-      
+
+      handleNewSensor= (event) => {
+        console.log("New sensor: ");
+        const { data } = this.state;
+        data["sensors"].push( {
+          "name":"New sensor",
+          "driver":"",
+          "min":"",
+          "max":"",
+          "unit":"",
+          "interval":""
+        });
+        this.setState({ data });
+      };
+
+      handleRemoveSensor= (index) => {
+        console.log("remove sensor: ",index);
+        const { data } = this.state;
+        data["sensors"].splice(index, 1);
+        this.setState({ data });
+      };
+
       handleSliderChange = name => (event, newValue) => {
         const { data } = this.state;
         data[name] = newValue;
@@ -125,7 +146,8 @@ export const restComponent = (endpointUrl, FormComponent) => {
           handleCheckboxChange={this.handleCheckboxChange}
           handleSliderChange={this.handleSliderChange}
           handleSensorChange={this.handleSensorChange}
-
+          handleNewSensor={this.handleNewSensor}
+          handleRemoveSensor={this.handleRemoveSensor}
           setData={this.setData}
           saveData={this.saveData}
           loadData={this.loadData}

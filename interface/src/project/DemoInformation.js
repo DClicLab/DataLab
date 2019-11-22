@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { ENDPOINT_ROOT } from '../constants/Env';
 
 import { withStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
@@ -12,6 +13,7 @@ import SectionContent from '../components/SectionContent';
 
 import Chart from 'chart.js';
 
+export const DEMO_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "demoSettings";
 
 const styles = theme => ({
   fileTable: {
@@ -19,132 +21,56 @@ const styles = theme => ({
   }
 });
 
-// Data generation
-function getRandomArray(numItems) {
-  // Create random array of objects
-  let names = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let data = [];
-  for(var i = 0; i < numItems; i++) {
-    data.push({
-      label: names[i],
-      value: Math.round(20 + 80 * Math.random())
-    });
-  }
-  return data;
-}
-function getRandomDateArray(numItems) {
-  // Create random array of objects (with date)
-  let data = [];
-  let baseTime = new Date('2018-05-01T00:00:00').getTime();
-  let dayMs = 24 * 60 * 60 * 1000;
-  for(var i = 0; i < numItems; i++) {
-    data.push({
-      time: new Date(baseTime + i * dayMs),
-      value: Math.round(20 + 80 * Math.random())
-    });
-  }
+function processSensorData(result,data){
+  if (data==undefined)
+    data=[];
+  data.push({
+    t:new Date(),
+    y:result.last
+  })
   return data;
 }
 
-
-function getData() {
-  let data = [];
-
-  data.push({
-    title: 'Visits',
-    data: getRandomDateArray(150)
-  });
-
-  data.push({
-    title: 'Categories',
-    data: getRandomArray(20)
-  });
-
-  data.push({
-    title: 'Categories',
-    data: getRandomArray(10)
-  });
-
-  data.push({
-    title: 'Data 4',
-    data: getRandomArray(6)
-  });
-
+function getData(data){
+  if (data["Sensor data"]== undefined){
+    data["Sensor data"]={};
+    data['Sensor data'].title = 'Sensor data';
+    data['Sensor data'].data=[];
+  }    
+  fetch("http://192.168.1.110/val")
+      .then(res => res.json())
+      .then(
+        (result) => {
+          processSensorData(result,data["Sensor data"].data);
+        },
+        // Note: it's important to handle errors here
+        // instead of a catch() block so that we don't swallow
+        // exceptions from actual bugs in components.
+        (error) => {
+          // this.setState({
+          //   isLoaded: true,
+          //   error
+          // });
+        });
   return data;
 }
-
-// LineChart
-class LineChart extends React.Component {
-  constructor(props) {
-    super(props);
-    this.canvasRef = React.createRef();
-  }
-
-  componentDidUpdate() {
-    this.myChart.data.labels = this.props.data.map(d => d.time);
-    this.myChart.data.datasets[0].data = this.props.data.map(d => d.value);
-    this.myChart.update();
-  }
-
-  componentDidMount() {
-    this.myChart = new Chart(this.canvasRef.current, {
-      type: 'line',
-      options: {
-			  maintainAspectRatio: false,
-        scales: {
-          xAxes: [
-            {
-              type: 'time',
-              time: {
-                unit: 'week'
-              }
-            }
-          ],
-          yAxes: [
-            {
-              ticks: {
-                min: 0
-              }
-            }
-          ]
-        }
-      },
-      data: {
-        labels: this.props.data.map(d => d.time),
-        datasets: [{
-          label: this.props.title,
-          data: this.props.data.map(d => d.value),
-          fill: 'none',
-          backgroundColor: this.props.color,
-          pointRadius: 2,
-          borderColor: this.props.color,
-          borderWidth: 1,
-          lineTension: 0
-        }]
-      }
-    });
-  }
-
-  render() {
-    return <canvas ref={this.canvasRef} />;
-  }
-}
-
 
 
 class DemoInformation extends Component {
   constructor(props) {
     super(props);
-
+    
+    let ldata=[];
     this.state = {
-      data: getData()
+      data: getData(ldata)
     };
   }
 
   componentDidMount() {
+//    this.props.loadData();
     window.setInterval(() => {
       this.setState({
-        data: getData()
+        data: getData(this.state.data)
       })
     }, 5000)
   }
@@ -182,17 +108,23 @@ class DemoInformation extends Component {
               </TableCell>
               <TableCell>
               <div className="main chart-wrapper">
-          <LineChart
-            data={this.state.data[0].data}
-            title={this.state.data[0].title}
-            color="#3E517A"
+          <SensorChart
+            data={this.state.data['Sensor data'].data}
+            title={this.state.data['Sensor data'].title}
+            color="rgba(255, 99, 132, 0.5)"
           />
         </div>
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell>
-                ProjectMenu.js
+              <div className="main chart-wrapper">
+          {/* <LineChart
+            data={this.state.data[1].data}
+            title={this.state.data[1].title}
+            color="#3E517A"
+          /> */}
+        </div>
               </TableCell>
               <TableCell>
                 You can add your project's screens to the side bar here.
@@ -240,5 +172,76 @@ class DemoInformation extends Component {
   }
 
 }
+
+class SensorChart extends React.Component {
+  constructor(props) {
+    super(props);
+    this.canvasRef = React.createRef();
+  }
+
+  componentDidUpdate() {
+    //this.myChart.data.labels = this.props.data.map(d => d.time);
+    //this.myChart.data.labels = this.props.data.map(d => d.label);
+    //this.myChart.data.datasets[0].data = this.props.data.map(d => d.time, d.value);
+    this.myChart.data.datasets[0].data = this.props.data;
+    this.myChart.update();
+  }
+
+  componentDidMount() {
+    
+    this.myChart = new Chart(this.canvasRef.current, {
+      type: 'line',
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        scales: {
+          xAxes: [{
+						type: 'time',
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'Date'
+						},
+						ticks: {
+							major: {
+								fontStyle: 'bold',
+								fontColor: '#FF0000'
+							}
+						}
+					}],
+          yAxes: [
+            {
+              ticks: {
+                min: 0
+              }
+            }
+          ]
+        }
+      },
+      data: {
+       // labels: this.props.data.map(d => d.label),
+        datasets: [{
+          label: this.props.title,
+          data: this.props.data.map(d => d.value),
+          fill: 'none',
+          backgroundColor: this.props.color,
+          pointRadius: 2,
+          borderColor: this.props.color,
+          borderWidth: 1,
+          lineTension: 0
+        }]
+      }
+    });
+  }
+
+  render() {
+    return <canvas ref={this.canvasRef} /> ;
+  }
+  
+}
+
+
+
+
 
 export default withStyles(styles)(DemoInformation);

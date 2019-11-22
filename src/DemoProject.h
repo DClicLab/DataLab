@@ -42,10 +42,11 @@ class DemoProject : public AdminSettingsService {
     void onConfigUpdated();
     void loop();
     void start();
+    CSensor* getSensor(const char* driverName,CSensorParams params);
+    CSensor* sensorList[5];
     
   private:
     //struct SensorConf _confSensorList[5];
-    CSensor* sensorList[5];
     void static getValueForSensor(int i);
     unsigned long _lastBlink = 0;
     uint8_t _blinkSpeed = 255;

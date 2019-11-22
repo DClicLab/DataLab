@@ -10,7 +10,6 @@ import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 import Slider from '@material-ui/core/Slider';
 import { makeStyles } from '@material-ui/core/styles';
-
 export const DEMO_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "demoSettings";
 
 const valueToPercentage = (value) => `${Math.round(value / 255 * 100)}%`;
