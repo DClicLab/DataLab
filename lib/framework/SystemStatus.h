@@ -7,6 +7,7 @@
 #elif defined(ESP_PLATFORM)
   #include <WiFi.h>
   #include <AsyncTCP.h>
+  #include <SPIFFS.h>
 #endif
 
 #include <ESPAsyncWebServer.h>

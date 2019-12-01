@@ -1,6 +1,12 @@
 #include <WiFi.h>
 
 
+//with time
+//{"ts":1451649600512, "values":{"key1":"value1", "key2":"value2"}}
+
+//without time
+//{"key1":"value1", "key2":"value2"}
+
 class CloudService
 {
 private:
@@ -13,11 +19,6 @@ private:
 public:
     CloudService(WiFiClient espClient,const char* host, char* credentials, char* format) : _espClient(espClient),_host(host),_credentials(credentials),_format(format) {}
     bool enabled;
-    void publishValue(float val, const char* name="", const char* target=""){
-        char buffer[100];
-        sprintf(buffer,_format,val);
-        publishValue(buffer,target);
-    }
     virtual void publishValue( const char* message ="" , const char* target=""){}
     ~CloudService() {}
 };

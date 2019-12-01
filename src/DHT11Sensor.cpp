@@ -7,7 +7,7 @@
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
 
-#define DHTPIN 16
+#define DHTPIN 33
 #define DHTTYPE DHT11
 
 //DHT dhtSensor(DHTPIN, DHTTYPE);
@@ -23,7 +23,7 @@ class DHT11Sensor : public CSensor
 {
 private:
     /* data */
-    DHT dhtSensor = DHT(16, DHT11);
+    DHT dhtSensor = DHT(33, DHT11);
     uint32_t delayMS;
 
 public:

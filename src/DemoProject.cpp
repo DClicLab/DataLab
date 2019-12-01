@@ -4,7 +4,8 @@
 #include <Ticker.h>
 #include <Wire.h>
 #include "DHT11Sensor.cpp"
-#include <string>
+#include "BMPSensor.cpp"
+//#include <string>
 
 using namespace std;
 
@@ -13,7 +14,7 @@ using namespace std;
 Ticker ticks[5];
 stack<int> queue; //Sensors needed to be pulled
 
-const size_t CAPACITY = JSON_OBJECT_SIZE(10);
+const size_t CAPACITY = JSON_OBJECT_SIZE(40);
 StaticJsonDocument<CAPACITY> doc;
 JsonObject sensorsJValues =doc.to<JsonObject>();
 
@@ -26,8 +27,26 @@ JsonObject sensorsJValues =doc.to<JsonObject>();
 const char* driverList[]={"random","dht11temp"};
 
 CSensor* DemoProject::getSensor(const char* driverName,CSensorParams params){
+
+  Serial.println("    In getSensor with params:");
+    Serial.print("    sensorParams->minVal: ");
+    Serial.println(params.minVal);
+    Serial.print("    params.maxVal: ");
+    Serial.println(params.maxVal);
+    Serial.print("    params.enabled: ");
+    Serial.println(params.enabled);
+    Serial.print("    params.interval: ");
+    Serial.println(params.interval);
+    Serial.print("    params.unit: ");
+    Serial.println(params.unit);
+    Serial.print("    params.unit: ");
+
+
   if (strcmp(driverName, "random") == 0){
     return new TestSensor(params);
+  }
+  if (strcmp(driverName, "bmp") == 0){
+    return new BMPSensor(params);
   }
   if (strcmp(driverName, "dht11temp") == 0){
     return new DHT11Sensor(params);
@@ -86,12 +105,38 @@ void DemoProject::start()
     Serial.println("Adding test, interval");
     Serial.println(sensorParams->interval);
     Serial.println(sensorParams->name);
-
+    if (sensorParams->enabled){
+    Serial.println("  ENABLED");
+    }
+    else
+    {
+          Serial.println("  DISABLED");
+    }
     //Instantiate the sensor based on the type attribute
     //TODO: Implement a sensor factory with self-registering sensors.
     sensorList[i] = getSensor(sensorParams->driver,*sensorParams);
-    
-    ticks[i].attach<int>(sensorParams->interval, getValueForSensor, i);
+
+    Serial.println("Sensor created:");
+    Serial.print("    sensorParams->minVal: ");
+    Serial.println(sensorList[i]->minVal);
+    Serial.print("    sensorList[i]->maxVal: ");
+    Serial.println(sensorList[i]->maxVal);
+    Serial.print("    sensorList[i]->enabled: ");
+    Serial.println(sensorList[i]->enabled);
+    Serial.print("    sensorList[i]->interval: ");
+    Serial.println(sensorList[i]->interval);
+    Serial.print("    sensorList[i]->unit: ");
+    Serial.println(sensorList[i]->unit);
+
+
+    if (sensorList[i]->enabled){
+
+      Serial.println("Sensor is Enabled");
+      sensorList[i]->begin();
+
+      ticks[i].attach<int>(sensorParams->interval, getValueForSensor, i);
+
+    }
     i++;
   }
   Serial.println("Done Adding sensors");
@@ -112,6 +157,8 @@ void DemoProject::reconfigureTheService()
 void DemoProject::getValueForSensor(int i)
 {
   //adding sensor to queue as we should not block in timer call
+  Serial.print("Timer rings for sensor ");
+  Serial.println(i);
   queue.push(i);
 }
 
@@ -123,25 +170,57 @@ void DemoProject::loop()
 {
   while (queue.size() > 0)
   {
-    Serial.println(queue.top());
-    Serial.print("Sensor is ");
+    CSensor* currentSensor = sensorList[queue.top()]; 
+    Serial.print("Sensor is number ");
+    Serial.print(queue.top());
 
-    if (sensorList[queue.top()]->enabled)
+    Serial.print(" name ");
+    Serial.println(currentSensor->name);
+    
+    if (currentSensor->enabled)
     {
+
+      Serial.println("Enabled");
       Serial.println("getting val for sensor");
-      Serial.println(sensorList[queue.top()]->name);
-      Serial.print("Value:");
-      Serial.println(sensorList[queue.top()]->getValue());
-      //doesnt work...
-      sensorsJValues[sensorList[queue.top()]->name] = sensorList[queue.top()]->getValue();
-      sensorsJValues["last"] = sensorList[queue.top()]->getValue();
+      Serial.println(currentSensor->name);
+      char buffer[256];
+      int size = currentSensor->getValuesAsJson(buffer);
+      if (size>0){
+        StaticJsonDocument<200> sensorDoc;
+        deserializeJson(sensorDoc, buffer);
+        JsonObject sensorObj = sensorDoc.as<JsonObject>();
+        for (JsonPair kvp : sensorObj) {
+          int size = sizeof(kvp.key().c_str())+sizeof(currentSensor->name) +1 ;
+          char keyname[size];
+          strcpy(keyname,currentSensor->name);
+          strcat(keyname,"-");
+          strcat(keyname,kvp.key().c_str());
+
+          Serial.println("JSON val for sensor: ");
+          Serial.print(keyname);
+          Serial.print("  ");
+          Serial.println(kvp.value().as<float>());
+          sensorsJValues[keyname] = kvp.value().as<float>();
+        }
+                
+      }else      {
+      Serial.print("single Value:");
+      float val = currentSensor->getValue();
+      sensorsJValues[currentSensor->name] = val;
+      Serial.println(val);
+      }
     }
+    else
+    {
+      Serial.println("Disabled.");
+      sensorsJValues.remove(sensorList[queue.top()]->name);
+    }
+    
     String ret;
     serializeJson(doc, ret);
     Serial.println("ret");
     Serial.println(ret);
-  
-
+//    storeInSPIFFS(ret);
 
     queue.pop();
   }
@@ -160,18 +239,25 @@ void DemoProject::readFromJsonObject(JsonObject &root)//create the local conf fr
   {
     Serial.println("adding sensor");
     Serial.println(jsensor["name"].as<const char *>());
-    Serial.print("min: ");
+    Serial.print("  min: ");
     Serial.println(jsensor["min"].as<int>());
-    Serial.print("max: ");
+    Serial.print("  max: ");
     Serial.println(jsensor["max"].as<int>());
-    Serial.print("enabled: ");
+    Serial.print("  enabled: ");
     Serial.println(jsensor["enabled"].as<char *>());
-    Serial.print("interval: ");
+    Serial.print("  interval: ");
     Serial.println(jsensor["interval"].as<int>());
-    Serial.print("unit: ");
+    Serial.print("  unit: ");
     Serial.println(jsensor["unit"].as<const char *>());
-    bool enabled = (jsensor["enabled"] == String("true"));
-
+    bool enabled = (strcmp(jsensor["enabled"],"true")==0);
+    if (enabled){
+    Serial.print("  ENABLED");
+    }
+    else
+    {
+          Serial.print("  DISABLED");
+    }
+    
     sensorParamsList[i++] = new CSensorParams(jsensor["min"].as<int>(), jsensor["max"].as<int>(), enabled, jsensor["interval"].as<int>(), jsensor["name"] | "untitled", jsensor["unit"], jsensor["driver"]);
   }
 }

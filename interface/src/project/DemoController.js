@@ -159,9 +159,9 @@ function SensorsAttributeForm(props) {
           <MenuItem value="undefined">
             <em>Select a driver</em>
           </MenuItem>
-        <MenuItem value={10}>Ten</MenuItem>
-        <MenuItem value={20}>Twenty</MenuItem>
-        <MenuItem value={30}>Thirty</MenuItem>
+        <MenuItem value={"bmp"}>BMPxxx</MenuItem>
+        <MenuItem value={"random"}>random</MenuItem>
+        <MenuItem value={"none"}>none</MenuItem>
       </Select>
       </FormControl>
     )

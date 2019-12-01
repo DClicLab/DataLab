@@ -80,6 +80,15 @@ class SystemStatus extends Component {
           <ListItemText primary="Flash Chip Size" secondary={data.flash_chip_size + ' bytes'} />
         </ListItem>
         <Divider variant="inset" component="li" />
+        <ListItem >
+          <ListItemAvatar>
+            <Avatar>
+              <SdStorageIcon />
+            </Avatar>
+          </ListItemAvatar>
+          <ListItemText primary="Free space on SPIFFS" secondary={data.free_spiffs + ' bytes'} />
+        </ListItem>
+        <Divider variant="inset" component="li" />
       </Fragment>
     );
   }

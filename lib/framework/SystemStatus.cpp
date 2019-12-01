@@ -13,6 +13,7 @@ void SystemStatus::systemStatus(AsyncWebServerRequest *request) {
   root["esp_platform"] = "esp8266";
 #elif defined(ESP_PLATFORM)
   root["esp_platform"] = "esp32";
+  root["free_spiffs"] = SPIFFS.totalBytes()-SPIFFS.usedBytes();
 #endif
   root["cpu_freq_mhz"] = ESP.getCpuFreqMHz();  
   root["free_heap"] = ESP.getFreeHeap();

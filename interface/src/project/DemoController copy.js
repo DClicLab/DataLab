@@ -19,14 +19,6 @@ class DemoController extends Component {
     super(props);
     this.state = {};
     this.state.sensors =[
-      {
-        "name":"my first sensor",
-        "type":"temp"
-      },
-      {
-        "name":"my sec sensored",
-        "type":"hum"
-      }
     ]
     console.log("restart");
     this.handleChange = this.handleChange.bind(this);
@@ -50,12 +42,6 @@ class DemoController extends Component {
           errorMessage={errorMessage}
           render={() =>
             <div>
-            <DemoControllerForm
-              demoSettings={data}
-              onReset={loadData}
-              onSubmit={saveData}
-              handleSliderChange={handleSliderChange}
-            />
             <SensorControllerForm
               demoSettings={data}
               onReset={loadData}
@@ -113,51 +99,23 @@ function SensorControllerForm(props) {
   const { demoSettings, onSubmit, onReset, handleValueChange,sensors } = props;
   const classes = useStyles();
   console.log(demoSettings);
-  // //state.sensors = sensors;
-  // function handleSensorChange(sensor,index, event){
-  //   console.log("HSE: ",event,  sensor , index);
-  //   console.log(event.target.value);
-  //   sensors[index].name = event.target.value;
-    
-  // }
-
-  // const sensor
-  // <ValidatorForm onSubmit={onSubmit}>
-  //   <Typography id="blink-speed-slider" className={classes.blinkSpeedLabel}>
-  //     Blink Speed
-  //   </Typography>
-  //   <label>
-  //       Name:
-  //       <input type="text" value={demoSettings.sensor[i].name} onChange={handleSliderChange.bind('value',i)} />
-  //     </label>
-  //   <Button variant="contained" color="primary" className={classes.button} type="submit">
-  //     Save
-  //   </Button>
-  //   <Button variant="contained" color="secondary" className={classes.button} onClick={onReset}>
-  //     Reset
-  //   </Button>
-  // </ValidatorForm>
-  //   )
-  // }
-
   return (
       <>
 <ValidatorForm onSubmit={onSubmit}>
-    {sensors.map((sensor,index) => (
-
-<TextValidator 
-key = {index}
-validators={['required']}
-errorMessages={['Server is required']}
-name="sensor"
-label="Sensor"
-id={"sensor"+index}
-className={classes.textField}
-value={sensors[index].name}
-onChange={(e) => handleValueChange}
-margin="normal"
-/>
-    ))}
+      {sensors.map((sensor,index) => (
+  <TextValidator 
+  key = {index}
+  validators={['required']}
+  errorMessages={['Server is required']}
+  name="sensor"
+  label="Sensor"
+  id={"sensor"+index}
+  className={classes.textField}
+  value={sensors[index].name}
+  onChange={(e) => handleValueChange}
+  margin="normal"
+  />
+      ))}
         <Button variant="contained" color="primary" className={classes.button} type="submit">
           Save
         </Button>

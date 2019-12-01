@@ -7,7 +7,8 @@
       "min":"10",
       "max":"35",
       "unit":"°",
-      "interval":2
+      "interval":2,
+      "enabled":"true"
     },
     {
       "name":"Ext temp",
@@ -15,13 +16,15 @@
       "min":"-10",
       "max":"20",
       "unit":"°",
-      "interval":3
+      "interval":3,
+      "enabled":"true"
     },
     {
       "name":"Ext humidity",
       "driver":"random",
       "min":"-10",
       "max":"20",
+      "enabled":"true",
       "unit":"°",
       "interval":5
     }
