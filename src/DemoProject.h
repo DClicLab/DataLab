@@ -3,6 +3,8 @@
 
 #include <AdminSettingsService.h>
 #include "CSensor.h"
+#include "CloudService.h"
+#include "MQTTService.h"
 
 #define BLINK_LED 2
 #define MAX_DELAY 1000
@@ -11,20 +13,8 @@
 #define DEMO_SETTINGS_FILE "/config/demoSettings.json"
 #define DEMO_SETTINGS_PATH "/rest/demoSettings"
 
-// struct SensorConf
-// {
-//   char name[32];
-//   uint8_t index;
-//   char type[12];//TODO convert to enum
-//   char extra[64];
-//   bool enabled;
-//   int min;
-//   int max;
-//   int interval;// in sec
-// };
 
-
-enum class CloudService { http, mqtt, adafruit, IFTTT, thingsboard};
+//enum class CloudService { http, mqtt, adafruit, IFTTT, thingsboard};
 
 // For each service we need to define:
 //  - url or endpoint
@@ -43,8 +33,8 @@ class DemoProject : public AdminSettingsService {
     void loop();
     void start();
     CSensor* getSensor(const char* driverName,CSensorParams params);
-    CSensor* sensorList[5];
-    CSensorParams* sensorParamsList[5];
+      
+    
     
   private:
     //struct SensorConf _confSensorList[5];
@@ -53,6 +43,9 @@ class DemoProject : public AdminSettingsService {
     uint8_t _blinkSpeed = 255;
     
   protected:
+    CSensor* sensorList[5];
+    CSensorParams* sensorParamsList[5];
+    MQTTService* cloudService;
     
     void readFromJsonObject(JsonObject& root);
     void writeToJsonObject(JsonObject& root);

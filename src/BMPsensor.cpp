@@ -28,7 +28,7 @@ class BMPSensor : public CSensor
 {
 private:
     Adafruit_BMP085 bmp;
-
+    bool running;
 public:
 
 
@@ -39,7 +39,9 @@ public:
         : CSensor(minVal, maxVal, enabled, interval, name, unit, driver){};
     void begin()
     {
-        if (!bmp.begin())
+            Serial.println("[BMPSensor] in begin()");
+        running = bmp.begin();
+        if (!running)
         {
             Serial.println("Could not find a valid BMP085 sensor, check wiring!");
         }
@@ -48,6 +50,12 @@ public:
 
      float getValue()
     {
+        if (!running)
+        {
+            Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+            return 0;
+        }
+    
     Serial.print("Temperature = ");
     Serial.print(bmp.readTemperature());
     Serial.println(" *C");
@@ -76,10 +84,15 @@ public:
 
     Serial.println();
     return bmp.readTemperature();
+    
 }
 
 int getValuesAsJson(char* dest){
-
+        if (!running)
+        {
+            Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+            return 0;
+        }
     return sprintf(dest, "{\"pressure\":%d,\"temperature\":%f,\"altitude\":%f}",bmp.readPressure(),bmp.readTemperature(),bmp.readAltitude());
 }
 

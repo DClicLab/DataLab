@@ -35,7 +35,6 @@ public:
     void begin()
     {
         pinMode(17, OUTPUT);
-        digitalWrite(17, HIGH);
         Serial.println("we are starting the DHT11 sensor");
         dhtSensor.begin();
     };

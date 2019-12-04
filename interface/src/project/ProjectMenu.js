@@ -16,10 +16,10 @@ class ProjectMenu extends Component {
     return (
       <List>
         <ListItem to={`/${PROJECT_PATH}/demo/`} selected={path.startsWith(`/${PROJECT_PATH}/demo/`)} button component={Link}>
-          <ListItemIcon>
+        <ListItemIcon>
             <SettingsRemoteIcon />
           </ListItemIcon>
-          <ListItemText primary="Demo Project" />
+          <ListItemText primary="CaptoSensors" />
         </ListItem>
       </List>
     )

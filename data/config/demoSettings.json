@@ -1,5 +1,4 @@
 {
-  "blink_speed": 100,
   "sensors":[
     {
       "name":"Room1 Temp",
@@ -28,5 +27,12 @@
       "unit":"°",
       "interval":5
     }
-  ]
+  ],
+  "cloudService":{
+    "driver":"MQTT",
+    "host":"192.168.1.46",
+    "credentials":"",
+    "format":"",
+    "target":"/capto"
+  }
 }

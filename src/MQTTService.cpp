@@ -1,56 +1,65 @@
-#include <PubSubClient.h>
-#include "CloudService.h"
-#include <WiFi.h>
+#include "MQTTService.h"
 
-class MQTTService : public CloudService
+WiFiClient espClient;
+PubSubClient client;
+
+//MQTTService::MQTTService(const char* host, const char* credentials, const char* format, const char* target): CloudService(host, credentials, format, target)
+MQTTService::MQTTService(const char* host, const char* credentials, const char* format, const char* target)
 {
-private:
-    char mqtt_server[64];
-    PubSubClient client;
-
-public:
-    MQTTService(WiFiClient wclient,const char* host, char* credentials, char* format);
-    virtual void publishValue( const char* message, const char* target);
-    void reconnect();
-    ~MQTTService();
-};
-
+   Serial.print("[MQTTService] Setting server:");
+   Serial.println(host);
     
-MQTTService::MQTTService(WiFiClient wclient,const char* host, char* credentials, char* format): CloudService(wclient,host, credentials, format)
-{
-    client = PubSubClient(wclient);
-    client.setServer(host, 1883);    
+    this->_host = host;
+    this->_credentials=credentials;
+    this->_format=format;
+    this->_target=target; 
+
+   client = PubSubClient(espClient);
+   client.setServer(host, 1883);    
 }
 
-void MQTTService::publishValue( const char* message , const char* target){
-
+void MQTTService::publishValue( const char* message ){
+  Serial.print("[MQTTService] Host is:");
+  Serial.println(this->_host);
+  Serial.print("[MQTTService] Message is:");
+  Serial.println(message);
+  if (WiFi.status()== WL_CONNECTED){
     if (!client.connected()){
       reconnect();
     }
-    client.publish(target, message);
-
+    Serial.print("[MQTTService] sending message:");
+    Serial.println(message);
+    client.publish(_target, message);
+  }
+  else{
+    Serial.println("[MQTTService] Wifi is not connected, cannot send message.");
+  }
 }
 
 
-void MQTTService::reconnect() {
-  // Loop until we're reconnected
-  int i=0;
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (client.connect("ESP8266Client")) {
-      Serial.println("connected");
-      // Subscribe
-      //client.subscribe(MQTTService::target);
-    } else {
-      if (i++>4)
-        return;
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(3000);
+bool MQTTService::reconnect() {
+
+  Serial.print("[MQTTService] Connecting to server.");
+  client.connect("captoClient");
+  
+  return client.connected();
+}
+void MQTTService::loop(){
+
+  if (WiFi.status()== WL_CONNECTED && !client.connected()) {
+    long now = millis();
+    if (now - lastReconnectAttempt > 3000) {
+      lastReconnectAttempt = now;
+      // Attempt to reconnect
+        if (reconnect()) {
+      Serial.println("[MQTTService] connected, cannot send message.");
+
+        lastReconnectAttempt = 0;
+      }
     }
+  } else {
+    // Client connected
+    client.loop();
   }
 }
 
