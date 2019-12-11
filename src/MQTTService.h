@@ -1,23 +1,22 @@
 #include <PubSubClient.h>
-//#include "CloudService.h"
+#include "CloudService.h"
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#elif defined(ESP_PLATFORM)
 #include <WiFi.h>
+#include <AsyncTCP.h>
+#endif
 
-//class MQTTService : public CloudService
-class MQTTService 
+class MQTTService : public CloudService
 {
 private:
     long lastReconnectAttempt = 0;
-    void onStationModeDisconnected(WiFiEvent_t event, WiFiEventInfo_t info);
-    void onStationModeGotIP(WiFiEvent_t event, WiFiEventInfo_t info);
-    const char* _credentials;
-    const char* _host;
-    const char* _format;
-    const char* _target;
     
     
 public:
-    MQTTService(const char* host, const char* credentials, const char* format, const char* target);
-    void publishValue( const char* message);
+    MQTTService(std::string host, std::string credentials, std::string format, std::string target);
+    void publishValue(const char * message);
     void loop();
     bool reconnect();
     bool enabled;

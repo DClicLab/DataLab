@@ -66,12 +66,11 @@ DemoProject::DemoProject(AsyncWebServer *server, FS *fs, SecurityManager *securi
 {
   Serial.println("Starting Demo");
   memset(sensorList, 0, sizeof(sensorList));
-  //set http
+  //set http value responder
   server->on("/val", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncJsonResponse *response = new AsyncJsonResponse(MAX_SETTINGS_SIZE);
-    JsonObject jsonObject = response->getRoot();
-    jsonObject.set(getSensorJValues());
-    response->setLength();
+    AsyncResponseStream *response = request->beginResponseStream("text/json");
+    serializeJson(doc, *response);
+    
     request->send(response);
   });
 }
@@ -79,8 +78,8 @@ DemoProject::DemoProject(AsyncWebServer *server, FS *fs, SecurityManager *securi
 void DemoProject::start()
 {
   Serial.print("MQTT Created at");
-  Serial.printf("0x%" PRIXPTR "\n", (uintptr_t) cloudService);
-  
+  Serial.printf("0x%" PRIXPTR "\n", (uintptr_t)cloudService);
+
   memset(sensorList, 0, sizeof(sensorList));
   memset(ticks, 0, sizeof(ticks));
 
@@ -215,9 +214,11 @@ void DemoProject::loop()
     Serial.println("ret");
     Serial.println(ret);
 
-    if (cloudService != NULL){
+    if (cloudService != NULL)
+    {
       cloudService->publishValue(ret.c_str());
     }
+
     //    storeInSPIFFS(ret);
 
     queue.pop();
@@ -231,56 +232,57 @@ void DemoProject::readFromJsonObject(JsonObject &root) //create the local conf f
   Serial.println("in read from json");
 
   JsonObject jcloud = root.getMember("cloudService");
-  
-  Serial.print("host: ");Serial.println(jcloud["host"].as<char *>());
-  Serial.print("credentials: ");Serial.println(jcloud["credentials"].as<char *>());
-  Serial.print("format: ");Serial.println(jcloud["format"].as<char *>());
-  Serial.print("target: ");Serial.println(jcloud["target"].as<char *>());
-  Serial.print("target: ");Serial.println(jcloud["target"].as<char *>());
-  
-  //cloudService = new MQTTService(jcloud["host"].as<char *>(), jcloud["credentials"].as<char *>(), jcloud["format"].as<char *>(), jcloud["target"].as<char *>());
-  cloudService = new MQTTService("192.168.1.46","","","/capto");
-  
-  Serial.print("MQTT Created at");
-  Serial.printf("0x%" PRIXPTR "\n", (uintptr_t) cloudService);
+  if (!jcloud.isNull()){
+    Serial.println("We have a new cloud service ");
+    //do we need to free the 'old' cloudservice?
+    delete(cloudService);
+    Serial.print("host: ");
+    Serial.println(jcloud["host"].as<char *>());
+    Serial.print("credentials: ");
+    Serial.println(jcloud["credentials"].as<char *>());
+    Serial.print("format: ");
+    Serial.println(jcloud["format"].as<char *>());
+    Serial.print("target: ");
+    Serial.println(jcloud["target"].as<char *>());
+    Serial.print("target: ");
+    Serial.println(jcloud["target"].as<char *>());
 
-  cloudService->publishValue("doed shit words");
-  
-  delay(3000);
-  
+    cloudService = new MQTTService(jcloud["host"].as<const char *>(), jcloud["credentials"].as<const char *>(), jcloud["format"].as<const char *>(), jcloud["target"].as<const char *>());
+  }
   int i = 0;
   JsonArray jsensors = root.getMember("sensors");
-  memset(sensorParamsList, 0, sizeof(sensorParamsList));
-  //Deserializing sensors
-  // deserialisation needed so that JsonBuffer is kept in memory as short as possible
-  for (JsonObject jsensor : jsensors)
+  if (jsensors.size() > 0)
   {
-    Serial.println("adding sensor");
-    Serial.println(jsensor["name"].as<const char *>());
-    Serial.print("  min: ");
-    Serial.println(jsensor["min"].as<int>());
-    Serial.print("  max: ");
-    Serial.println(jsensor["max"].as<int>());
-    Serial.print("  enabled: ");
-    Serial.println(jsensor["enabled"].as<char *>());
-    Serial.print("  interval: ");
-    Serial.println(jsensor["interval"].as<int>());
-    Serial.print("  unit: ");
-    Serial.println(jsensor["unit"].as<const char *>());
-    bool enabled = (strcmp(jsensor["enabled"], "true") == 0);
-    if (enabled)
+    memset(sensorParamsList, 0, sizeof(sensorParamsList));
+    //Deserializing sensors
+    // deserialisation needed so that JsonBuffer is kept in memory as short as possible
+    for (JsonObject jsensor : jsensors)
     {
-      Serial.print("  ENABLED");
-    }
-    else
-    {
-      Serial.print("  DISABLED");
-    }
+      Serial.println("adding sensor");
+      Serial.println(jsensor["name"].as<const char *>());
+      Serial.print("  min: ");
+      Serial.println(jsensor["min"].as<int>());
+      Serial.print("  max: ");
+      Serial.println(jsensor["max"].as<int>());
+      Serial.print("  enabled: ");
+      Serial.println(jsensor["enabled"].as<char *>());
+      Serial.print("  interval: ");
+      Serial.println(jsensor["interval"].as<int>());
+      Serial.print("  unit: ");
+      Serial.println(jsensor["unit"].as<const char *>());
+      bool enabled = (strcmp(jsensor["enabled"], "true") == 0);
+      if (enabled)
+      {
+        Serial.print("  ENABLED");
+      }
+      else
+      {
+        Serial.print("  DISABLED");
+      }
 
-    sensorParamsList[i++] = new CSensorParams(jsensor["min"].as<int>(), jsensor["max"].as<int>(), enabled, jsensor["interval"].as<int>(), jsensor["name"] | "untitled", jsensor["unit"], jsensor["driver"]);
+      sensorParamsList[i++] = new CSensorParams(jsensor["min"].as<int>(), jsensor["max"].as<int>(), enabled, jsensor["interval"].as<int>(), jsensor["name"] | "untitled", jsensor["unit"], jsensor["driver"]);
+    }
   }
-
-  Serial.print("DONE SENSOR PARAMS NOW TO THE CLOUDSERVICE");
 }
 
 // void DemoProject::saveValue()
@@ -298,10 +300,10 @@ void DemoProject::writeToJsonObject(JsonObject &root)
 
   JsonObject jcloud = root.createNestedObject("cloudService");
   jcloud["driver"] = "MQTT";
-  jcloud["host"] = "192.168.1.46";
-  jcloud["credentials"] = "";
-  jcloud["format"] = "";
-  jcloud["target"] = "/capto";
+  jcloud["host"] = cloudService->_host.c_str();
+  jcloud["credentials"] = cloudService->_credentials.c_str();
+  jcloud["format"] = cloudService->_format.c_str();
+  jcloud["target"] = cloudService->_target.c_str();
 
   JsonArray sensorJList = root.createNestedArray("sensors");
   for (CSensorParams *sensorParams : sensorParamsList)

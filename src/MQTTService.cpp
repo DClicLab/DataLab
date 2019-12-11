@@ -3,33 +3,25 @@
 WiFiClient espClient;
 PubSubClient client;
 
-//MQTTService::MQTTService(const char* host, const char* credentials, const char* format, const char* target): CloudService(host, credentials, format, target)
-MQTTService::MQTTService(const char* host, const char* credentials, const char* format, const char* target)
-{
-   Serial.print("[MQTTService] Setting server:");
-   Serial.println(host);
-    
-    this->_host = host;
-    this->_credentials=credentials;
-    this->_format=format;
-    this->_target=target; 
 
+MQTTService::MQTTService(std::string host, std::string credentials, std::string format, std::string target) : CloudService(host, credentials, format, target)
+{
    client = PubSubClient(espClient);
-   client.setServer(host, 1883);    
+   client.setServer(_host.c_str(), 1883);    
+
 }
 
-void MQTTService::publishValue( const char* message ){
-  Serial.print("[MQTTService] Host is:");
-  Serial.println(this->_host);
-  Serial.print("[MQTTService] Message is:");
-  Serial.println(message);
+void MQTTService::publishValue(const char * message ){
+
+  Serial.printf("Host is %s",this->_host.c_str());
+
   if (WiFi.status()== WL_CONNECTED){
     if (!client.connected()){
       reconnect();
     }
     Serial.print("[MQTTService] sending message:");
     Serial.println(message);
-    client.publish(_target, message);
+    client.publish(_target.c_str(), message );
   }
   else{
     Serial.println("[MQTTService] Wifi is not connected, cannot send message.");

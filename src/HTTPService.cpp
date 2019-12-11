@@ -1,6 +1,11 @@
 #include <PubSubClient.h>
 #include "CloudService.h"
+
+#if defined(ESP8266)
+#include <ESP8266HTTPClient.h>
+#elif defined(ESP_PLATFORM)
 #include <HTTPClient.h>
+#endif
 
 class HTTPService : public CloudService
 {
@@ -23,7 +28,7 @@ HTTPService::HTTPService(const char* host, const char* credentials, const char* 
 
 void HTTPService::publishValue( const char* message){
   //concat host and target
-  http.begin(_target); //HTTP
+  http.begin(_target.c_str()); //HTTP
   http.addHeader("Content-Type", "application/json");
   if (creds[0]!='\0'){
     char * pch;

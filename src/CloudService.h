@@ -1,6 +1,6 @@
 #ifndef CloudService_h
 #define CloudService_h
-#include <WiFi.h>
+//#include <WiFi.h>
 
 
 //with time
@@ -22,23 +22,22 @@ protected:
 
 
 public:
-    CloudService(const char* host, const char* credentials, const char* format, const char* target) {
+    std::string _credentials;
+    std::string _host;
+    std::string _format;
+    std::string _target;
+    CloudService(std::string host, std::string credentials, std::string format, std::string target) {
          
-         Serial.println("Instanciating cloud service");
-         
-         this->_host = host;
-         this->_credentials=credentials;
-         this->_format=format;
-         this->_target=target; 
+         Serial.println("Instanciating cloud service");         
+         _host = host;
+         _credentials= credentials;
+         _format= format;
+         _target= target; 
     }
-    const char* _credentials;
-    const char* _host;
-    const char* _format;
-    const char* _target;
     bool enabled;
     virtual void loop(){};
-    virtual void publishValue( const char* message =""){}
-    ~CloudService() {}
+    virtual void publishValue( const char* message =""){};
+    virtual ~CloudService() {};
 };
 
 #endif

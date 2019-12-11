@@ -14,13 +14,30 @@ import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
-import Select from '@material-ui/core/Select';
+import SelectValidator from '@material-ui/core/Select';
 import { array } from 'prop-types';
 
 
 export const DEMO_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "demoSettings";
 
-const valueToPercentage = (value) => `${Math.round(value / 255 * 100)}%`;
+
+
+const useStyles = makeStyles(theme => ({
+  button: {
+    marginRight: theme.spacing(1),
+    marginTop: theme.spacing(2),
+  },
+  selectField: {
+    // width: "100%",
+    color: "blue",
+    marginTop: theme.spacing(1.2),
+    marginBottom: theme.spacing(0.5)
+  },
+  blinkSpeedLabel: {
+    marginBottom: theme.spacing(5),
+  }
+}));
+
 
 class DemoController extends Component {
   componentDidMount() {
@@ -68,15 +85,6 @@ class DemoController extends Component {
   }
 }
 
-const useStyles = makeStyles(theme => ({
-  button: {
-    marginRight: theme.spacing(1),
-    marginTop: theme.spacing(2),
-  },
-  blinkSpeedLabel: {
-    marginBottom: theme.spacing(5),
-  }
-}));
 
 
 function SensorsControllerForm(props) {
@@ -122,7 +130,7 @@ function SensorControllerForm(props) {
     <SensorsAttributeForm attributename="max" sensor={sensor} fieldType="int" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="unit" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="enabled" sensor={sensor} fieldType="bool" handleSensorChange={handleSensorChange} index={index}/>
-    <SensorsAttributeForm attributename="driver" sensor={sensor} fieldType="driver" handleSensorChange={handleSensorChange} index={index}/>
+    <SensorsAttributeForm attributename="driver" sensor={sensor}  fieldType="driver" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="interval" sensor={sensor} fieldType="int" unit="sec" handleSensorChange={handleSensorChange} index={index}/>
     <Button color="secondary" className={classes.button} onClick={() => { handleRemoveSensor(index)}}>
         Remove
@@ -145,14 +153,14 @@ function SensorsAttributeForm(props) {
   console.log("classes",classes);
   if (attributename=="driver"){
     return (
-      <FormControl className={classes.textField} key={index}>
+      <FormControl key={index}>
         <FormHelperText>{attributename}</FormHelperText>
       {/* <InputLabel id="demo-simple-select-label"></InputLabel> */}
-      <Select
+      <SelectValidator
           name={"sensor_" + attributename + index}
           label={"Sensor " + attributename  }
           id={"sensor" + attributename + index}
-          className={classes.textField}
+          className={classes.selectField}
           value={sensor[attributename]}//Why could this be undefined???
           onChange={ handleSensorChange(index,attributename)}
         >
@@ -162,7 +170,7 @@ function SensorsAttributeForm(props) {
         <MenuItem value={"bmp"}>BMPxxx</MenuItem>
         <MenuItem value={"random"}>random</MenuItem>
         <MenuItem value={"none"}>none</MenuItem>
-      </Select>
+      </SelectValidator>
       </FormControl>
     )
   }

@@ -107,6 +107,13 @@ export const restComponent = (endpointUrl, FormComponent) => {
         this.setState({ data });
       };
 
+      handleCloudChange = (attr) => (event, newValue) => {
+        console.log("handleSensorChange: ",event.target,newValue);
+        const { data } = this.state;
+        data["cloudService"][attr] = event.target.value;
+        this.setState({ data });
+      };
+
       handleNewSensor= (event) => {
         console.log("New sensor: ");
         const { data } = this.state;
@@ -146,6 +153,7 @@ export const restComponent = (endpointUrl, FormComponent) => {
           handleCheckboxChange={this.handleCheckboxChange}
           handleSliderChange={this.handleSliderChange}
           handleSensorChange={this.handleSensorChange}
+          handleCloudChange={this.handleCloudChange}
           handleNewSensor={this.handleNewSensor}
           handleRemoveSensor={this.handleRemoveSensor}
           setData={this.setData}
