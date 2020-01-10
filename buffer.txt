@@ -1,0 +1,15 @@
+sensor1
+    humidity
+        ts1:32,4
+        ts2:35,2
+    temperature
+        ts1:23,4
+        ts3:24,0
+
+fileindex
+    {"sensor1:humidity":0,
+    "sensor1:temperature":1}
+
+datafile
+/data/ts1
+    [id][tsdiff][float val]

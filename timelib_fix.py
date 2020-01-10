@@ -37,4 +37,4 @@ deleteTimeHeader(os.path.join(env.subst('$PROJECTLIBDEPS_DIR'), env.subst('$PIOE
 
 # >4.x lib deps directory
 deleteTimeHeader(os.path.join(env.subst('$PROJECT_LIBDEPS_DIR'), env.subst('$PIOENV')))
-deleteTimeHeader(os.path.join(env.subst('$PROJECT_LIBDEPS_DIR'), env.subst('$PIOENV')))
+deleteTimeHeader("C:\\Users\\bourgur\\.platformio\\lib")

@@ -1,3 +1,4 @@
+#define MQTT_SOCKET_TIMEOUT 1
 #include <PubSubClient.h>
 #include "CloudService.h"
 #if defined(ESP8266)

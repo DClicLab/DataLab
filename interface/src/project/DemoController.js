@@ -30,7 +30,7 @@ const useStyles = makeStyles(theme => ({
   selectField: {
     // width: "100%",
     color: "blue",
-    marginTop: theme.spacing(1.2),
+    marginTop: theme.spacing(1.3),
     marginBottom: theme.spacing(0.5)
   },
   blinkSpeedLabel: {
@@ -126,12 +126,10 @@ function SensorControllerForm(props) {
   return (
     <>
     <SensorsAttributeForm attributename="name" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
-    <SensorsAttributeForm attributename="min" sensor={sensor} fieldType="int" handleSensorChange={handleSensorChange} index={index}/>
-    <SensorsAttributeForm attributename="max" sensor={sensor} fieldType="int" handleSensorChange={handleSensorChange} index={index}/>
-    <SensorsAttributeForm attributename="unit" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="enabled" sensor={sensor} fieldType="bool" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="driver" sensor={sensor}  fieldType="driver" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="interval" sensor={sensor} fieldType="int" unit="sec" handleSensorChange={handleSensorChange} index={index}/>
+    <SensorsAttributeForm attributename="configuration" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
     <Button color="secondary" className={classes.button} onClick={() => { handleRemoveSensor(index)}}>
         Remove
       </Button>
@@ -188,8 +186,4 @@ function SensorsAttributeForm(props) {
       />
   );
 }
-
-
-
-
 export default restComponent(DEMO_SETTINGS_ENDPOINT, DemoController);

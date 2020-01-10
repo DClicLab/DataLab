@@ -26,14 +26,7 @@ class CSensorParams
     
 };
 
-typedef struct CSensorValue
-{
-    char sname[32];
-    float value;
-} CSV;
-
-
-class CSensor
+class CSensor //XXX add buffer to csensor
 {
 private:
     /* data */
@@ -51,16 +44,13 @@ public:
         strcpy(name,s.name);
     } 
 
-    CSensor(int pmin, int pmax,bool penabled, int pinterval, const char* pname, const char* punit = "", const char* pdriver = "random")
+    CSensor(int pmin, int pmax,bool penabled, int pinterval, const char* pname, const char* punit = "", const char* pdriver = "random",const char* pconfig = "")
         : minVal(pmin), maxVal(pmax), enabled(penabled),interval(pinterval)
     {
-        Serial.println("Creating CSensor with values: ");
-        Serial.println(minVal);
-        Serial.println(maxVal);
-        Serial.println(enabled);
-        Serial.println(interval);
+        Serial.printf("Creating CSensor for %s\n",pname);
         strcpy(driver,pdriver);
         strcpy(name,pname);
+        strcpy(config,pconfig);
         strcpy(unit,punit);
     };
     //virtual void begin();
@@ -72,6 +62,9 @@ public:
     char unit[5];
     char driver[16];
     char status[64];
+    char config[512];
+
+
     virtual float getValue() {return 0;};
     virtual int getValuesAsJson(char* buffer) 
         {
@@ -81,7 +74,5 @@ public:
     virtual void begin() {};
     ~CSensor(){};
 };
-
-
 
 #endif // Sensor_h

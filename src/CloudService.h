@@ -36,7 +36,7 @@ public:
     }
     bool enabled;
     virtual void loop(){};
-    virtual void publishValue( const char* message =""){};
+    void publishValue( const char* message =""){Serial.println("ERROR - publishValue() not implemented!");};
     virtual ~CloudService() {};
 };
 

@@ -5,22 +5,20 @@
 #include <Wire.h>
 #include "DHT11Sensor.cpp"
 #include "BMPSensor.cpp"
+#include <TimeLib.h>
+#include "storage.h"
+#include <NtpClientLib.h>
+
 using namespace std;
 
-//Ticker* ticks[5];
-//CSensor* sensorList[5];
 Ticker ticks[5];
 stack<int> queue; //Sensors needed to be pulled
+
+Storage storage;
 
 const size_t CAPACITY = JSON_OBJECT_SIZE(40);
 StaticJsonDocument<CAPACITY> doc;
 JsonObject sensorsJValues = doc.to<JsonObject>();
-
-// template<typename T> CSensor * createInstance(CSensorParams params) { return new T(params); }
-// typedef CSensor* (*mapT)();
-
-// typedef std::map<std::string,mapT> mapSensor;
-// mapSensor test;
 
 const char *driverList[] = {"random", "dht11temp"};
 
@@ -70,7 +68,44 @@ DemoProject::DemoProject(AsyncWebServer *server, FS *fs, SecurityManager *securi
   server->on("/val", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("text/json");
     serializeJson(doc, *response);
-    
+
+    request->send(response);
+  });
+
+
+  server->on("/list", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  File root = SPIFFS.open("/");
+ 
+  File file = root.openNextFile();
+ 
+  char ret[2048];
+
+  while(file){
+ 
+      strcat(ret,file.name());
+      Serial.println(file.name());
+ 
+      file = root.openNextFile();
+  }
+
+   request->send(200, "text/plain", ret);
+  });
+
+  server->on("/getjson", HTTP_GET, [](AsyncWebServerRequest *request) {
+    int id;
+    if (request->hasParam("id"))
+      id = atoi(request->getParam("id")->value().c_str());
+
+    AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [&id](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+      //Write up to "maxLen" bytes into "buffer" and return the amount written.
+      //index equals the amount of bytes that have been already sent
+      //You will be asked for more data until 0 is returned
+      //Keep in mind that you can not delay or yield waiting for more data!
+
+      return storage.readAsJsonStream(id, 1, storage.currentTS, buffer, maxLen, index);
+    });
+
     request->send(response);
   });
 }
@@ -148,8 +183,7 @@ void DemoProject::reconfigureTheService()
 void DemoProject::getValueForSensor(int i)
 {
   //adding sensor to queue as we should not block a timer call
-  Serial.print("Timer rings for sensor ");
-  Serial.println(i);
+  Serial.printf("Timer rings for sensor %d\n", i);
   queue.push(i);
 }
 
@@ -159,20 +193,14 @@ DemoProject::~DemoProject()
 
 void DemoProject::loop()
 {
+  // doc.clear();
+  // sensorsJValues = doc.to<JsonObject>();
   while (queue.size() > 0)
   {
     CSensor *currentSensor = sensorList[queue.top()];
-    Serial.print("Sensor is number ");
-    Serial.print(queue.top());
-
-    Serial.print(" name ");
-    Serial.println(currentSensor->name);
-
     if (currentSensor->enabled)
     {
-      Serial.println("Enabled");
-      Serial.println("getting val for sensor");
-      Serial.println(currentSensor->name);
+      Serial.printf("Getting value for %s\n", currentSensor->name);
       char buffer[256];
       int size = currentSensor->getValuesAsJson(buffer);
       if (size > 0)
@@ -184,23 +212,20 @@ void DemoProject::loop()
         {
           int size = sizeof(kvp.key().c_str()) + sizeof(currentSensor->name) + 1;
           char keyname[size];
-          strcpy(keyname, currentSensor->name);
-          strcat(keyname, "-");
-          strcat(keyname, kvp.key().c_str());
-
-          Serial.println("JSON val for sensor: ");
-          Serial.print(keyname);
-          Serial.print("  ");
-          Serial.println(kvp.value().as<float>());
+          sprintf(keyname, "%s-%s", currentSensor->name, kvp.key().c_str());
+          Serial.printf("Got JSON val: %s:%f\n", keyname, kvp.value().as<float>());
           sensorsJValues[keyname] = kvp.value().as<float>();
+
+          storage.store(keyname, now(), kvp.value().as<float>());
         }
       }
       else
       {
         Serial.print("single Value:");
         float val = currentSensor->getValue();
-        sensorsJValues[currentSensor->name] = val;
         Serial.println(val);
+        sensorsJValues[currentSensor->name] = val;
+        storage.store(currentSensor->name, now(), val);
       }
     }
     else
@@ -211,16 +236,18 @@ void DemoProject::loop()
 
     String ret;
     serializeJson(doc, ret);
-    Serial.println("ret");
-    Serial.println(ret);
+    Serial.printf("JSON loop: %s\n", ret.c_str());
 
-    if (cloudService != NULL)
+    if (cloudService != NULL && cloudService->enabled)
     {
       cloudService->publishValue(ret.c_str());
     }
 
-    //    storeInSPIFFS(ret);
-
+    // for (auto &&vals : sensorsJValues)
+    // {
+    //   Serial.printf("now storing: key %s, val %f\n", vals.key().c_str(), vals.value().as<float>());
+    //   storage.store(vals.key().c_str(), now(), vals.value().as<float>());
+    // }
     queue.pop();
   }
 
@@ -232,10 +259,11 @@ void DemoProject::readFromJsonObject(JsonObject &root) //create the local conf f
   Serial.println("in read from json");
 
   JsonObject jcloud = root.getMember("cloudService");
-  if (!jcloud.isNull()){
+  if (!jcloud.isNull())
+  {
     Serial.println("We have a new cloud service ");
     //do we need to free the 'old' cloudservice?
-    delete(cloudService);
+    delete (cloudService);
     Serial.print("host: ");
     Serial.println(jcloud["host"].as<char *>());
     Serial.print("credentials: ");
@@ -329,5 +357,6 @@ void DemoProject::writeToJsonObject(JsonObject &root)
     Serial.print("sensorParams->unit: ");
     jsensor["unit"] = sensorParams->unit;
     jsensor["driver"] = sensorParams->driver;
+    //jsensor["config"] = sensorParams->config;
   }
 }

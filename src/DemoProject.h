@@ -9,7 +9,6 @@
 #define BLINK_LED 2
 #define MAX_DELAY 1000
 
-#define DEFAULT_BLINK_SPEED 100
 #define DEMO_SETTINGS_FILE "/config/demoSettings.json"
 #define DEMO_SETTINGS_PATH "/rest/demoSettings"
 
@@ -22,6 +21,8 @@
 //  - timer
 //  - linked sensor values (array) +++
 
+#define BUFFERSIZE 10
+
 class DemoProject : public AdminSettingsService {
 
   public:
@@ -32,13 +33,13 @@ class DemoProject : public AdminSettingsService {
     void onConfigUpdated();
     void loop();
     void start();
+    //void call(const char* buffer);
     CSensor* getSensor(const char* driverName,CSensorParams params);
-      
-    
+       
     
   private:
-    //struct SensorConf _confSensorList[5];
     void static getValueForSensor(int i);
+    
     unsigned long _lastBlink = 0;
     uint8_t _blinkSpeed = 255;
     
@@ -51,8 +52,4 @@ class DemoProject : public AdminSettingsService {
     void writeToJsonObject(JsonObject& root);
   
 };
-
-
-
-
 #endif
