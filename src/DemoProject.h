@@ -33,9 +33,8 @@ class DemoProject : public AdminSettingsService {
     void onConfigUpdated();
     void loop();
     void start();
-    //void call(const char* buffer);
-    CSensor* getSensor(const char* driverName,CSensorParams params);
-       
+    //CSensor* getSensor(const char* driverName,CSensorParams params);
+    CSensor* getSensor(JsonObject& config);
     
   private:
     void static getValueForSensor(int i);
@@ -45,7 +44,7 @@ class DemoProject : public AdminSettingsService {
     
   protected:
     CSensor* sensorList[5];
-    CSensorParams* sensorParamsList[5];
+    //CSensorParams* sensorParamsList[5];
     MQTTService* cloudService;
     
     void readFromJsonObject(JsonObject& root);

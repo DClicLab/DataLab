@@ -7,19 +7,25 @@ class TestSensor : public CSensor
 {
 private:
     /* data */
+    int minVal;
+    int maxVal;
 
 public:
     TestSensor(){};
-    TestSensor( const CSensorParams &s ): CSensor(s){Serial.println("In testsensor constructor");};
+    TestSensor( JsonObject& sensorConf): CSensor(sensorConf){
+        minVal = sensorConf["min"].as<int>();
+        maxVal = sensorConf["max"].as<int>();
+    };
 
-    TestSensor(int minVal, int maxVal, bool enabled,int interval,const char* name, const char* unit, const char* driver) 
-        : CSensor(minVal, maxVal, enabled, interval, name, unit, driver ){
-            
-        };
     void begin()
     {
-        Serial.println("we are starting the sensor");
+        Serial.printf("we are starting the random sensor with min: %d and max:%d\n",minVal,maxVal);
     };
+
+    void getConfig(JsonObject& sensorConf){
+        sensorConf["min"] = minVal;
+        sensorConf["max"] = maxVal;
+    }
 
     //This function is called to return the sensor value at every interval
     float getValue()

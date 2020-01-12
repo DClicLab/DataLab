@@ -6,61 +6,75 @@
 
 void Storage::loadIndex()
 {
+    Serial.println("In loadIndex");
     SPIFFS.begin();
     File file = SPIFFS.open("/data/index", "r");
     StaticJsonDocument<256> doc;
     DeserializationError error = deserializeJson(doc, file);
-    file.close();
     if (error)
         Serial.println(F("Failed to read file, using default configuration"));
 
     JsonArray arr = doc.as<JsonArray>();
     for (JsonObject id : arr)
     {
+        Serial.printf("Reading index entry for %s: %d \n",id["name"].as<char*>(),id["index"].as<int>() );
         index.insert(std::make_pair(id["name"].as<std::string>(), id["index"].as<int>()));
     }
+    file.close();
 }
 void Storage::saveIndex()
 {
-    char buffer[index.size() * 64];
+
+    char buffer[index.size() * 64] = {0};
     buffer[0] = '[';
     for (std::map<std::string, int>::iterator it = index.begin(); it != index.end(); ++it)
     {
-        sprintf(buffer, "{\"name\":\"%s\",\"index\":\"%d\"},",it->first.c_str(),it->second);
+        sprintf(buffer + strlen(buffer), "{\"name\":\"%s\",\"index\":\"%d\"},",it->first.c_str(),it->second);
     }
     buffer[strlen(buffer) - 1] = ']'; //replace last , by ]
+    Serial.printf("New index file content is: %s \n",buffer );
     File file = SPIFFS.open("/data/index", "w");
     file.print(buffer);
+    file.close();
+}
+
+void Storage::begin(){
+    loadIndex();
+    currentTS = updateCurrentTS();
+
 }
 
 Storage::Storage()
 {
-    currentTS = updateCurrentTS();
+    
 }
 
 time_t Storage::updateCurrentTS()
 {
 
-    char buffer[11];
+    char buffer[50];
     buffer[0] = 0;
-
-    File root = SPIFFS.open("/data/0/");
+    Serial.println("lisring files");
+    File root = SPIFFS.open("/data/0");
     File file = root.openNextFile();
     //Not sure if we could take always the last file of openNextFile()
     while (file)
     {
-        char cname[11]; //current filename
+        char cname[50]; //current filename
         strncpy(cname, file.name(), sizeof(cname));
-
+        Serial.printf("%s vs %s....",buffer,cname);
         for (unsigned int i = 0; i < strlen(cname) - 1; i++)
         {
             if (cname[i] > buffer[i])
                 strcpy(buffer, cname);
         }
+        Serial.printf("-> %s\n",buffer);
         file = root.openNextFile();
     }
+    Serial.printf("Last ts is: %s",buffer + strlen("/data/0/"));
+    currentTS = atol(buffer+strlen("/data/0/"));
+    Serial.printf("ts is : %lu",currentTS);
 
-    currentTS = atol(buffer);
     if (currentTS == 0L)
     { //if no file
         rotateTS();
@@ -70,7 +84,7 @@ time_t Storage::updateCurrentTS()
 
 time_t Storage::getFirstTS()
 {
-    char buffer[11];
+    char buffer[24];
 
     snprintf(buffer, sizeof(buffer), "%lu", currentTS);
 
@@ -79,7 +93,7 @@ time_t Storage::getFirstTS()
     //Not sure that we could take always the first file of openNextFile()
     while (file)
     {
-        char cname[11]; //current filename
+        char cname[24]; //current filename
         strncpy(cname, file.name(), sizeof(cname));
 
         for (unsigned int i = 0; i < strlen(cname) - 1; i++)
@@ -117,7 +131,7 @@ void Storage::freeSpaceIfNeeded()
 //create a new file with current time
 void Storage::rotateTS()
 {
-    char buffer[22];
+    char buffer[25];
     currentTS = now();
     sprintf(buffer, "/data/0/%lu", currentTS);
     File file = SPIFFS.open(buffer, "w");
@@ -126,6 +140,7 @@ void Storage::rotateTS()
 
 void Storage::store(int id, time_t ts, float val)
 {
+
     datapoint point;
     point.id = id;
     point.val = val;
@@ -134,7 +149,7 @@ void Storage::store(int id, time_t ts, float val)
         Serial.printf("WARN - ts to store (%lu) is older than current ts (%lu), setting diff to 0", ts, currentTS);
         point.tsdiff = 0;
     }
-    else if ((ts - currentTS) > pow(2, TSDIFFSIZE)) //the difference is too big to be stored in TSDIFFSIZE bits we need to rotate
+    else if ((ts - currentTS) > pow(2, 8)) //the difference is too big to be stored in TSDIFFSIZE bits we need to rotate
     {
         rotateTS();
         point.tsdiff = 0;
@@ -200,8 +215,7 @@ long Storage::readAsJsonStream(int id, int tsstart, time_t tsfile, uint8_t *buff
         datapoint point;
         file.read((byte*) &point, sizeof(point));//read the next point.
         if (point.id == id){
-            Serial.printf("read point id:%d, tsdiff:%d, val:%f | pos:%d/%d bufferpos:%d/%d\n",point.id,point.tsdiff,point.val,pos,file.size(),bufferpos,maxLen);
-            bufferpos+=sprintf((char*) buffer + bufferpos,"%s,%d,%f\n",pointname,point.tsdiff+tsfile,point.val);//format entry csv style.
+            bufferpos+=sprintf((char*) buffer + bufferpos,"%s,%li,%f\n",pointname,point.tsdiff+tsfile,point.val);//format entry csv style.
         }
     }
     file.close();

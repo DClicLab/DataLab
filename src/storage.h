@@ -41,6 +41,7 @@ public:
     void store(int id, time_t ts, float val);
     void store(const char* name, time_t ts, float val);
     long readAsJsonStream(int id, int tsstart, time_t tsfile, uint8_t *buffer, size_t maxLen, size_t index);
+    void begin(/* args */);
     Storage(/* args */);
     ~Storage() {}
 };

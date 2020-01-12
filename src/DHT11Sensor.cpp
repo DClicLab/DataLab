@@ -23,18 +23,21 @@ class DHT11Sensor : public CSensor
 {
 private:
     /* data */
-    DHT dhtSensor = DHT(33, DHT11);
+    DHT dhtSensor = DHT(33,DHT11);
     uint32_t delayMS;
+    int pin;
 
 public:
-    DHT11Sensor(){};
-    DHT11Sensor(const CSensorParams &s) : CSensor(s){};
+    
+    DHT11Sensor( JsonObject& sensorConf): CSensor(sensorConf){
+        pin = sensorConf["pin"].as<int>();
+        dhtSensor = DHT(pin, DHT11,6);
 
-    DHT11Sensor(int minVal, int maxVal, bool enabled, int interval, const char *name, const char *unit, const char *driver)
-        : CSensor(minVal, maxVal, enabled, interval, name, unit, driver){};
+    };
+
     void begin()
     {
-        pinMode(17, OUTPUT);
+        pinMode(pin, OUTPUT);
         Serial.println("we are starting the DHT11 sensor");
         dhtSensor.begin();
     };
@@ -42,7 +45,6 @@ public:
     //This function is called to return the sensor value at every interval
     float getValue()
     {
-
         // Reading temperature or humidity takes about 250 milliseconds!
         // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
         float h = dhtSensor.readHumidity();

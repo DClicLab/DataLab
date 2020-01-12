@@ -33,10 +33,11 @@ public:
 
 
     BMPSensor(){};
-    BMPSensor(const CSensorParams &s) : CSensor(s){};
+    
+    BMPSensor( JsonObject& sensorConf): CSensor(sensorConf){
+        //no need for extra config
+    };
 
-    BMPSensor(int minVal, int maxVal, bool enabled, int interval, const char *name, const char *unit, const char *driver)
-        : CSensor(minVal, maxVal, enabled, interval, name, unit, driver){};
     void begin()
     {
             Serial.println("[BMPSensor] in begin()");

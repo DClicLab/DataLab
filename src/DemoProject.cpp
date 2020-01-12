@@ -22,36 +22,23 @@ JsonObject sensorsJValues = doc.to<JsonObject>();
 
 const char *driverList[] = {"random", "dht11temp"};
 
-CSensor *DemoProject::getSensor(const char *driverName, CSensorParams params)
+CSensor *DemoProject::getSensor(JsonObject &sensorConf)
 {
 
-  Serial.println("    In getSensor with params:");
-  Serial.print("    sensorParams->minVal: ");
-  Serial.println(params.minVal);
-  Serial.print("    params.maxVal: ");
-  Serial.println(params.maxVal);
-  Serial.print("    params.enabled: ");
-  Serial.println(params.enabled);
-  Serial.print("    params.interval: ");
-  Serial.println(params.interval);
-  Serial.print("    params.unit: ");
-  Serial.println(params.unit);
-  Serial.print("    params.unit: ");
-
-  if (strcmp(driverName, "random") == 0)
+  if (strcmp(sensorConf["driver"], "random") == 0)
   {
-    return new TestSensor(params);
+    return new TestSensor(sensorConf);
   }
-  if (strcmp(driverName, "bmp") == 0)
+  if (strcmp(sensorConf["driver"], "bmp") == 0)
   {
-    return new BMPSensor(params);
+    return new BMPSensor(sensorConf);
   }
-  if (strcmp(driverName, "dht11temp") == 0)
+  if (strcmp(sensorConf["driver"], "dht11temp") == 0)
   {
-    return new DHT11Sensor(params);
+    return new DHT11Sensor(sensorConf);
   }
 
-  return new TestSensor(params);
+  return new TestSensor(sensorConf);
   //Add here your custom sensor
 }
 
@@ -72,24 +59,23 @@ DemoProject::DemoProject(AsyncWebServer *server, FS *fs, SecurityManager *securi
     request->send(response);
   });
 
-
   server->on("/list", HTTP_GET, [](AsyncWebServerRequest *request) {
+    File root = SPIFFS.open("/");
 
-  File root = SPIFFS.open("/");
- 
-  File file = root.openNextFile();
- 
-  char ret[2048];
+    File file = root.openNextFile();
 
-  while(file){
- 
-      strcat(ret,file.name());
+    char ret[2048];
+
+    while (file)
+    {
+
+      strcat(ret, file.name());
       Serial.println(file.name());
- 
-      file = root.openNextFile();
-  }
 
-   request->send(200, "text/plain", ret);
+      file = root.openNextFile();
+    }
+
+    request->send(200, "text/plain", ret);
   });
 
   server->on("/getjson", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -112,56 +98,25 @@ DemoProject::DemoProject(AsyncWebServer *server, FS *fs, SecurityManager *securi
 
 void DemoProject::start()
 {
-  Serial.print("MQTT Created at");
-  Serial.printf("0x%" PRIXPTR "\n", (uintptr_t)cloudService);
-
-  memset(sensorList, 0, sizeof(sensorList));
   memset(ticks, 0, sizeof(ticks));
-
   Serial.println("starting conf");
-  // init all sensors
+  storage.begin();
   int i = 0;
-  Serial.println("instanciating test sensors");
-  for (CSensorParams *sensorParams : sensorParamsList)
+  Serial.println("DEBUG - Preparing sensors timers");
+  for (CSensor* sensor: sensorList)
   {
-    Serial.println("Adding sensorParams...");
-    if (sensorParams == NULL)
-    {
-      Serial.println("Skipping not set");
+    if (sensor==NULL){
       continue;
     }
-    Serial.println("Adding test, interval");
-    Serial.println(sensorParams->interval);
-    Serial.println(sensorParams->name);
-    if (sensorParams->enabled)
-    {
-      Serial.println("  ENABLED");
-    }
-    else
-    {
-      Serial.println("  DISABLED");
-    }
-    //Instantiate the sensor based on the type attribute
-    //TODO: Implement a sensor factory with self-registering sensors.
-    sensorList[i] = getSensor(sensorParams->driver, *sensorParams);
 
-    Serial.println("Sensor created:");
-    Serial.print("    sensorParams->minVal: ");
-    Serial.println(sensorList[i]->minVal);
-    Serial.print("    sensorList[i]->maxVal: ");
-    Serial.println(sensorList[i]->maxVal);
-    Serial.print("    sensorList[i]->enabled: ");
-    Serial.println(sensorList[i]->enabled);
-    Serial.print("    sensorList[i]->interval: ");
-    Serial.println(sensorList[i]->interval);
-    Serial.print("    sensorList[i]->unit: ");
-    Serial.println(sensorList[i]->unit);
-
-    if (sensorList[i]->enabled)
+    if (sensor->enabled)
     {
       Serial.println("Sensor is Enabled");
-      sensorList[i]->begin();
-      ticks[i].attach<int>(sensorParams->interval, getValueForSensor, i);
+      sensor->begin();
+
+      Serial.printf("Attaching Sensor %s, interval: %d\n",sensor->name,sensor->interval);
+      ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
+      Serial.println("Done attaching sensor");
     }
     i++;
   }
@@ -243,11 +198,6 @@ void DemoProject::loop()
       cloudService->publishValue(ret.c_str());
     }
 
-    // for (auto &&vals : sensorsJValues)
-    // {
-    //   Serial.printf("now storing: key %s, val %f\n", vals.key().c_str(), vals.value().as<float>());
-    //   storage.store(vals.key().c_str(), now(), vals.value().as<float>());
-    // }
     queue.pop();
   }
 
@@ -261,59 +211,23 @@ void DemoProject::readFromJsonObject(JsonObject &root) //create the local conf f
   JsonObject jcloud = root.getMember("cloudService");
   if (!jcloud.isNull())
   {
-    Serial.println("We have a new cloud service ");
-    //do we need to free the 'old' cloudservice?
-    delete (cloudService);
-    Serial.print("host: ");
-    Serial.println(jcloud["host"].as<char *>());
-    Serial.print("credentials: ");
-    Serial.println(jcloud["credentials"].as<char *>());
-    Serial.print("format: ");
-    Serial.println(jcloud["format"].as<char *>());
-    Serial.print("target: ");
-    Serial.println(jcloud["target"].as<char *>());
-    Serial.print("target: ");
-    Serial.println(jcloud["target"].as<char *>());
-
+    Serial.println("We have a cloud service ");
     cloudService = new MQTTService(jcloud["host"].as<const char *>(), jcloud["credentials"].as<const char *>(), jcloud["format"].as<const char *>(), jcloud["target"].as<const char *>());
   }
+  memset(sensorList, 0, sizeof(sensorList));
+  memset(ticks, 0, sizeof(ticks));
   int i = 0;
+
   JsonArray jsensors = root.getMember("sensors");
   if (jsensors.size() > 0)
   {
-    memset(sensorParamsList, 0, sizeof(sensorParamsList));
-    //Deserializing sensors
-    // deserialisation needed so that JsonBuffer is kept in memory as short as possible
     for (JsonObject jsensor : jsensors)
     {
-      Serial.println("adding sensor");
-      Serial.println(jsensor["name"].as<const char *>());
-      Serial.print("  min: ");
-      Serial.println(jsensor["min"].as<int>());
-      Serial.print("  max: ");
-      Serial.println(jsensor["max"].as<int>());
-      Serial.print("  enabled: ");
-      Serial.println(jsensor["enabled"].as<char *>());
-      Serial.print("  interval: ");
-      Serial.println(jsensor["interval"].as<int>());
-      Serial.print("  unit: ");
-      Serial.println(jsensor["unit"].as<const char *>());
-      bool enabled = (strcmp(jsensor["enabled"], "true") == 0);
-      if (enabled)
-      {
-        Serial.print("  ENABLED");
-      }
-      else
-      {
-        Serial.print("  DISABLED");
-      }
-
-      sensorParamsList[i++] = new CSensorParams(jsensor["min"].as<int>(), jsensor["max"].as<int>(), enabled, jsensor["interval"].as<int>(), jsensor["name"] | "untitled", jsensor["unit"], jsensor["driver"]);
+      sensorList[i++] = getSensor(jsensor);
     }
   }
 }
 
-// void DemoProject::saveValue()
 
 void DemoProject::writeToJsonObject(JsonObject &root)
 {
@@ -334,29 +248,11 @@ void DemoProject::writeToJsonObject(JsonObject &root)
   jcloud["target"] = cloudService->_target.c_str();
 
   JsonArray sensorJList = root.createNestedArray("sensors");
-  for (CSensorParams *sensorParams : sensorParamsList)
+  for (CSensor *sensor : sensorList)
   {
-    if (sensorParams == NULL)
-      continue;
-    JsonObject jsensor = sensorJList.createNestedObject();
-    jsensor["min"] = sensorParams->minVal;
-    Serial.print("sensorParams->minVal: ");
-    Serial.println(sensorParams->minVal);
-    jsensor["max"] = sensorParams->maxVal;
-    Serial.print("sensorParams->maxVal: ");
-    Serial.println(sensorParams->maxVal);
-    jsensor["enabled"] = (sensorParams->enabled == true ? "true" : "false");
-    Serial.print("sensorParams->enabled: ");
-    Serial.println(sensorParams->enabled);
-    jsensor["interval"] = sensorParams->interval;
-    Serial.print("sensorParams->interval: ");
-    Serial.println(sensorParams->interval);
-    Serial.print("sensorParams->unit: ");
-    Serial.println(sensorParams->unit);
-    jsensor["name"] = sensorParams->name;
-    Serial.print("sensorParams->unit: ");
-    jsensor["unit"] = sensorParams->unit;
-    jsensor["driver"] = sensorParams->driver;
-    //jsensor["config"] = sensorParams->config;
+    if (sensor!=NULL){
+      JsonObject jsensor = sensorJList.createNestedObject();
+      sensor->getConfig(jsensor);
+    }
   }
 }

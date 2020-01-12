@@ -1,6 +1,6 @@
 {
-  "ssid": "ITER-Makers",
-  "password": "Let's make it!",
+  "ssid": "romiot",
+  "password": "RomIOT!!",
   "hostname": "esp32-react",
   "static_ip_config": false
 }

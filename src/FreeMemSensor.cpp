@@ -9,7 +9,10 @@ private:
     /* data */
 
 public:
-    FreeMemSensor(CSensorParams params) : CSensor(params){};
+    FreeMemSensor(JsonObject& sensorConf): CSensor(sensorConf){
+        //no need for extra config
+    };
+
     void begin()
     {
         Serial.println("we are starting the sensor");
@@ -19,5 +22,4 @@ public:
         return ESP.getFreeHeap();
     };
 };
-
 #endif // FreeMemSensor

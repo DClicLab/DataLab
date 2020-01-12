@@ -2,29 +2,30 @@
 #define CSensor_h
 #include <string.h>
 #include <Arduino.h>
+#include <AsyncJson.h>
 #include <map>
 
 
-class CSensorParams
-{
-    public:
-    int minVal;
-    int maxVal;
-    bool enabled;
-    int interval;
-    char name[32];
-    char unit[5];
-    char driver[16];
+// class CSensorParams
+// {
+//     public:
+//     int minVal;
+//     int maxVal;
+//     bool enabled;
+//     int interval;
+//     char name[32];
+//     char unit[5];
+//     char driver[16];
 
-    CSensorParams(int pmin, int pmax,bool penabled, int pinterval, const char* pname, const char* punit = "", const char* pdriver = "random")
-        : minVal(pmin), maxVal(pmax), enabled(penabled),interval(pinterval){
-        Serial.println("Creating sensorparams: ");
-            strcpy(driver,pdriver);
-            strcpy(name,pname);
-            strcpy(unit,punit);
-        }
+//     CSensorParams(int pmin, int pmax,bool penabled, int pinterval, const char* pname, const char* punit = "", const char* pdriver = "random")
+//         : minVal(pmin), maxVal(pmax), enabled(penabled),interval(pinterval){
+//         Serial.println("Creating sensorparams: ");
+//             strcpy(driver,pdriver);
+//             strcpy(name,pname);
+//             strcpy(unit,punit);
+//         }
     
-};
+// };
 
 class CSensor //XXX add buffer to csensor
 {
@@ -32,38 +33,28 @@ private:
     /* data */
 public:
     CSensor();
-    CSensor( const CSensorParams &s ): minVal(s.minVal),maxVal(s.maxVal),enabled(s.enabled),interval(s.interval)
-    { 
-        Serial.println("Creating CSensor with values: ");
-        Serial.println(s.minVal);
-        Serial.println(s.maxVal);
-        Serial.println(s.enabled);
-        Serial.println(s.interval);
-        strcpy(driver,s.driver);
-        strcpy(unit,s.unit);
-        strcpy(name,s.name);
-    } 
 
-    CSensor(int pmin, int pmax,bool penabled, int pinterval, const char* pname, const char* punit = "", const char* pdriver = "random",const char* pconfig = "")
-        : minVal(pmin), maxVal(pmax), enabled(penabled),interval(pinterval)
+    CSensor(JsonObject& sensorConf)
+        :enabled(sensorConf["enabled"].as<bool>()),interval(sensorConf["interval"].as<int>())
     {
-        Serial.printf("Creating CSensor for %s\n",pname);
-        strcpy(driver,pdriver);
-        strcpy(name,pname);
-        strcpy(config,pconfig);
-        strcpy(unit,punit);
+        Serial.printf("Creating CSensor for %s\n",sensorConf["name"].as<char*>());
+        strcpy(driver,sensorConf["driver"].as<char*>());
+        strcpy(name,sensorConf["name"].as<char*>());        
     };
     //virtual void begin();
-    int minVal;
-    int maxVal;
     bool enabled;
     int interval;
     char name[32];
-    char unit[5];
     char driver[16];
-    char status[64];
     char config[512];
 
+
+    void getConfig(JsonObject& sensorConf){
+        sensorConf["driver"]= driver;
+        sensorConf["name"]= name;
+        sensorConf["interval"]= interval;
+        sensorConf["enabled"]= enabled;
+    }
 
     virtual float getValue() {return 0;};
     virtual int getValuesAsJson(char* buffer) 
