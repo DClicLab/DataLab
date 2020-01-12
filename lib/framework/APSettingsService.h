@@ -13,46 +13,41 @@
 
 #define DNS_PORT 53
 
-#define AP_DEFAULT_SSID "ssid"
-#define AP_DEFAULT_PASSWORD "password"
+#define AP_DEFAULT_SSID "ESP8266-React"
+#define AP_DEFAULT_PASSWORD "esp-react"
 
 #define AP_SETTINGS_FILE "/config/apSettings.json"
 #define AP_SETTINGS_SERVICE_PATH "/rest/apSettings"
 
 class APSettingsService : public AdminSettingsService {
+ public:
+  APSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
+  ~APSettingsService();
 
-  public:
+  void begin();
+  void loop();
 
-    APSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
-    ~APSettingsService();
+ protected:
+  void readFromJsonObject(JsonObject& root);
+  void writeToJsonObject(JsonObject& root);
+  void onConfigUpdated();
 
-    void begin();
-    void loop();
+ private:
+  // access point settings
+  uint8_t _provisionMode;
+  String _ssid;
+  String _password;
 
-  protected:
+  // for the mangement delay loop
+  unsigned long _lastManaged;
 
-    void readFromJsonObject(JsonObject& root);
-    void writeToJsonObject(JsonObject& root);
-    void onConfigUpdated();
+  // for the captive portal
+  DNSServer* _dnsServer;
 
-  private:
-
-    // access point settings
-    uint8_t _provisionMode;
-    String _ssid;
-    String _password;
-
-    // for the mangement delay loop
-    unsigned long _lastManaged;
-
-    // for the captive portal
-    DNSServer *_dnsServer;
-
-    void manageAP();
-    void startAP();
-    void stopAP() ;
-    void handleDNS();
-
+  void manageAP();
+  void startAP();
+  void stopAP();
+  void handleDNS();
 };
 
-#endif // end APSettingsConfig_h
+#endif  // end APSettingsConfig_h

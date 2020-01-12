@@ -1,5 +1,5 @@
-#include <ESP8266React.h>
 #include <DemoProject.h>
+#include <ESP8266React.h>
 #include <FS.h>
 
 #define SERIAL_BAUD_RATE 115200
@@ -15,8 +15,12 @@ void setup() {
 
   Serial.println("Starting spiffs");
   // start the file system (must be done before starting the framework)
+#ifdef ESP32
+  SPIFFS.begin(true);
+#elif defined(ESP8266)
   SPIFFS.begin();
-  Serial.println("Starting react");  
+#endif
+
   // start the framework and demo project
   esp8266React.begin();
   Serial.println("Starting demo");  

@@ -24,8 +24,11 @@
 #define BUFFERSIZE 10
 
 class DemoProject : public AdminSettingsService {
+ public:
+  DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
+  ~DemoProject();
 
-  public:
+  void loop();
 
     DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
     ~DemoProject();
