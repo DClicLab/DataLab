@@ -23,7 +23,7 @@ class DHT11Sensor : public CSensor
 {
 private:
     /* data */
-    DHT dhtSensor = DHT(33,DHT11);
+    DHT dhtSensor = DHT(3,DHT11); //Pin is not use here, pin is set in constructor.
     uint32_t delayMS;
     int pin;
 
@@ -32,7 +32,6 @@ public:
     DHT11Sensor( JsonObject& sensorConf): CSensor(sensorConf){
         pin = sensorConf["pin"].as<int>();
         dhtSensor = DHT(pin, DHT11,6);
-
     };
 
     void begin()
@@ -42,6 +41,19 @@ public:
         dhtSensor.begin();
     };
 
+
+    int getValuesAsJson(char* buffer) 
+    {
+        float h = dhtSensor.readHumidity();
+        float t = dhtSensor.readTemperature();
+        if (isnan(h) || isnan(t))
+        {
+            Serial.println(F("Failed to read from DHT sensor!"));
+            return 0;
+        }
+        sprintf(buffer,"{\"humidity\":%f,\"temperature\":%f}",h,t);
+        return 2;
+    }
     //This function is called to return the sensor value at every interval
     float getValue()
     {

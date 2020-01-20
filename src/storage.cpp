@@ -51,29 +51,24 @@ Storage::Storage()
 
 time_t Storage::updateCurrentTS()
 {
+    time_t buffer=0;
 
-    char buffer[50];
-    buffer[0] = 0;
-    Serial.println("lisring files");
+    Serial.println("listing files");
     File root = SPIFFS.open("/data/0");
     File file = root.openNextFile();
     //Not sure if we could take always the last file of openNextFile()
     while (file)
     {
-        char cname[50]; //current filename
-        strncpy(cname, file.name(), sizeof(cname));
-        Serial.printf("%s vs %s....",buffer,cname);
-        for (unsigned int i = 0; i < strlen(cname) - 1; i++)
-        {
-            if (cname[i] > buffer[i])
-                strcpy(buffer, cname);
+
+        time_t cts = atoi(strrchr(file.name(),'/')+1);
+        Serial.printf("got ts %lu for name %s and substr %s",cts,file.name(),strrchr(file.name(),'/')+1);
+        if (cts > buffer){
+            buffer = cts;
         }
-        Serial.printf("-> %s\n",buffer);
         file = root.openNextFile();
     }
-    Serial.printf("Last ts is: %s",buffer + strlen("/data/0/"));
-    currentTS = atol(buffer+strlen("/data/0/"));
-    Serial.printf("ts is : %lu",currentTS);
+    Serial.printf("Last ts is: %lu",buffer);
+    currentTS = buffer;
 
     if (currentTS == 0L)
     { //if no file
@@ -82,28 +77,31 @@ time_t Storage::updateCurrentTS()
     return currentTS;
 }
 
-time_t Storage::getFirstTS()
+//get first file after ts after
+time_t Storage::getFirstTS(time_t after=0L)
 {
-    char buffer[24];
-
-    snprintf(buffer, sizeof(buffer), "%lu", currentTS);
-
-    File root = SPIFFS.open("/data/0/");
+    
+    // Serial.printf("GETFIRST =entering with %lu\n", after);
+    File root = SPIFFS.open("/data/0");
     File file = root.openNextFile();
     //Not sure that we could take always the first file of openNextFile()
+    time_t buffer=currentTS;
+
     while (file)
     {
-        char cname[24]; //current filename
-        strncpy(cname, file.name(), sizeof(cname));
+    // Serial.printf("GETFIRST =got file\n");
+        time_t cts = atoi(strrchr(file.name(),'/')+1);
+        // Serial.printf("GETFIRST = %lu vs %lu and after %lu...",cts, buffer, after);
 
-        for (unsigned int i = 0; i < strlen(cname) - 1; i++)
-        {
-            if (cname[i] < buffer[i])
-                strcpy(buffer, cname);
+        if ((cts < buffer)&&(cts>=after)){
+            buffer = cts;
+
         }
+
+        Serial.printf("%lu.\n", buffer);
         file = root.openNextFile();
     }
-    return atol(buffer);
+    return buffer;
 }
 
 void Storage::deleteTS(time_t ts)
@@ -188,15 +186,30 @@ uint Storage::getNameForID(int id, char * buffer){
     return 0;
 }
 
+
+
 long lastpos=0;
-long Storage::readAsJsonStream(int id, int tsstart, time_t tsfile, uint8_t *buffer, size_t maxLen, size_t index)
+long id_s=0; //save val between stream calls
+long tsstart_s=0; //save val between stream calls
+long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t *buffer, size_t maxLen, size_t index)
 {
-    Serial.printf("\nDEBUG - In readAsJsonStream index is %d heap free is %d ; maxlen %d \n",index, ESP.getFreeHeap(),maxLen);
+    Serial.printf("\nDEBUG - In readAsJsonStream id is %d, tsstart is %lu, index is %d heap free is %d ; maxlen %d \n",id,tsstart, index, ESP.getFreeHeap(),maxLen);
     Serial.printf("DEBUG - lastpos %lu\n",lastpos);
-    if (index==0)
+    if (index==0){
+        id_s=id;
+        tsstart_s = tsstart;
         lastpos=0;
+    }else
+    {
+        id = id_s;
+        tsstart = tsstart_s;
+    }
+    
+
     char filename[22];
     
+    time_t tsfile = getFirstTS(tsstart);
+    Serial.printf("GETJSON - loading tsfile: %lu for start %lu\n",tsfile, tsstart);
 
     if (maxLen > 4096)
         maxLen = 4096;//ESPAsync crashes with bigger chunks
@@ -204,21 +217,25 @@ long Storage::readAsJsonStream(int id, int tsstart, time_t tsfile, uint8_t *buff
     sprintf(filename, "/data/0/%lu", tsfile);
     File file = SPIFFS.open(filename, "r");
 
-    long bufferpos=0;
+    uint bufferpos=0;
     char pointname[64];
     getNameForID(id,pointname);
     file.seek(lastpos);
     //no need for local buffer file.read is as fast with or without buffer.
-    for (long pos = file.position(); (pos < file.size()) && (bufferpos<(maxLen)); pos += sizeof(datapoint))
+    Serial.printf("GETJSON - file size is %lu last pos is %lu\n",file.size(), lastpos);
+    for (uint pos = file.position(); (pos < file.size()) && (bufferpos<(maxLen)); pos += sizeof(datapoint))
     {
         lastpos = pos;
         datapoint point;
+        Serial.printf("GETJSON - reading point at %d\n",pos);
         file.read((byte*) &point, sizeof(point));//read the next point.
-        if (point.id == id){
+        if ((point.id == id)&&(point.tsdiff+tsfile > tsstart)){
             bufferpos+=sprintf((char*) buffer + bufferpos,"%s,%li,%f\n",pointname,point.tsdiff+tsfile,point.val);//format entry csv style.
         }
     }
     file.close();
+    lastpos +=sizeof(datapoint);
+    Serial.printf("GETJSON - returned  %d bytes \n",bufferpos);
     return bufferpos;
 }
 #endif // Storagecpp

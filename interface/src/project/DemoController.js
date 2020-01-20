@@ -101,6 +101,7 @@ function SensorsControllerForm(props) {
       
           <SensorControllerForm
           sensor = {sensor}
+          drivers = {demoSettings["drivers"]}
           handleSensorChange={handleSensorChange}
           handleRemoveSensor={handleRemoveSensor}
           index = {index}
@@ -120,16 +121,16 @@ function SensorsControllerForm(props) {
 }
 
 function SensorControllerForm(props) {
-  const { sensor, handleSensorChange, index ,handleRemoveSensor} = props;
+  const { sensor, handleSensorChange, index ,handleRemoveSensor, drivers} = props;
   const classes = useStyles();
 
   return (
     <>
     <SensorsAttributeForm attributename="name" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="enabled" sensor={sensor} fieldType="bool" handleSensorChange={handleSensorChange} index={index}/>
-    <SensorsAttributeForm attributename="driver" sensor={sensor}  fieldType="driver" handleSensorChange={handleSensorChange} index={index}/>
+    <SensorsAttributeForm attributename="driver" sensor={sensor}  fieldType="driver" drivers={drivers} handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="interval" sensor={sensor} fieldType="int" unit="sec" handleSensorChange={handleSensorChange} index={index}/>
-    <SensorsAttributeForm attributename="configuration" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
+    <SensorsAttributeForm attributename="config" sensor={sensor} fieldType="config" handleSensorChange={handleSensorChange} index={index}/>
     <Button color="secondary" className={classes.button} onClick={() => { handleRemoveSensor(index)}}>
         Remove
       </Button>
@@ -146,9 +147,30 @@ function getValidator(type){
 }
 
 function SensorsAttributeForm(props) {
-  const { sensor, index, attributename, handleSensorChange,fieldType,unit } = props;
+  const { sensor, index, attributename, handleSensorChange,fieldType,drivers } = props;
   const classes = useStyles();
   console.log("classes",classes);
+  if (attributename=="config"){
+    return Object.keys(sensor[attributename]).map((key,cindex)=> (
+            
+      <TextValidator 
+      name={"sensor_" + attributename + index+cindex}
+      label={"Configuration: " + key }
+      id={"sensor" + attributename + index + cindex}
+      className={classes.textField}
+      value={sensor[attributename][key]}//Why could this be undefined???
+      onChange={ handleSensorChange(index,attributename,key)}
+      margin="normal"
+      />
+        
+    
+    
+    ))
+
+
+  }
+
+
   if (attributename=="driver"){
     return (
       <FormControl key={index}>
@@ -165,9 +187,13 @@ function SensorsAttributeForm(props) {
           <MenuItem value="undefined">
             <em>Select a driver</em>
           </MenuItem>
-        <MenuItem value={"bmp"}>BMPxxx</MenuItem>
-        <MenuItem value={"random"}>random</MenuItem>
-        <MenuItem value={"none"}>none</MenuItem>
+          {drivers.map((name)=> (
+            
+            <MenuItem value={name}>{name}</MenuItem>
+              
+          
+          
+          ))}
       </SelectValidator>
       </FormControl>
     )
@@ -177,7 +203,7 @@ function SensorsAttributeForm(props) {
       validators={getValidator(fieldType)}
       errorMessages={[attributename + ' is required']}
       name={"sensor_" + attributename + index}
-      label={"Sensor " + attributename + (unit?" (in "+unit+")":'')}
+      label={"Sensor " + attributename }
       id={"sensor" + attributename + index}
       className={classes.textField}
       value={sensor[attributename]}//Why could this be undefined???

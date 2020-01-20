@@ -21,15 +21,8 @@
 //  - timer
 //  - linked sensor values (array) +++
 
-#define BUFFERSIZE 10
-
 class DemoProject : public AdminSettingsService {
  public:
-  DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
-  ~DemoProject();
-
-  void loop();
-
     DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
     ~DemoProject();
     void reconfigureTheService();
@@ -41,7 +34,7 @@ class DemoProject : public AdminSettingsService {
     
   private:
     void static getValueForSensor(int i);
-    
+    time_t getNow();
     unsigned long _lastBlink = 0;
     uint8_t _blinkSpeed = 255;
     

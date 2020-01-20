@@ -104,7 +104,7 @@ void NTPSettingsService::configureNTP() {
 
 void NTPSettingsService::processSyncEvent(NTPSyncEvent_t ntpEvent) {
     
-    if (year(now())>2035 ||year(now())<2019 ){
+    if (year(NTP.getLastNTPSync())>2035 ||year(NTP.getLastNTPSync())<2019 ){
         Serial.print ("Got wrong NTP time: ");
         Serial.println (NTP.getTimeDateString (NTP.getLastNTPSync ()));
      _reconfigureNTP = true;

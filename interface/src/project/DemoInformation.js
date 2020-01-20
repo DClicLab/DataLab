@@ -38,12 +38,11 @@ const chartColors = {
 };
 
 function processSensorData(result,dataList){
-  if (dataList==undefined)
+  if (dataList===undefined)
     dataList={};
   for (const label in result) {
     if (result.hasOwnProperty(label)) {
-      const element = result[label];
-      if (dataList[label]==undefined)
+      if (dataList[label]===undefined)
         dataList[label]=[]
         dataList[label].push({
           t:new Date(),
@@ -90,9 +89,9 @@ class DemoInformation extends Component {
     }, 2000)
   }
   render() {
-    const { classes, dataList } = this.props;
+    const { classes } = this.props;
     return (
-      <SectionContent title="Captobox 2.0" titleGutter>
+      <SectionContent title="DataLab v2" titleGutter>
         <Typography variant="body1" paragraph>
           This simple demo project allows you to control the blink speed of the built-in LED. 
           It demonstrates how the esp8266-react framework may be extended for your own IoT project.
@@ -147,7 +146,7 @@ class SensorChart2 extends React.Component {
 
   componentDidUpdate() {
         const datas = this.props.dataList;
-        if (this.myChart.data.datasets.length==0)
+        if (this.myChart.data.datasets.length===0)
           this.myChart.data.datasets.push(
             {
               "label":this.props.label,

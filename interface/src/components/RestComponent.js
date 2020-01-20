@@ -100,12 +100,24 @@ export const restComponent = (endpointUrl, FormComponent) => {
         this.setState({ data });
       };
 
-      handleSensorChange = (index,attr) => (event, newValue) => {
+      handleSensorChange = (index,attr, configname) => (event, newValue) => {
         console.log("handleSensorChange: ",event.target,newValue);
         const { data } = this.state;
+        if (configname == null){
         data["sensors"][index][attr] = event.target.value;
+      }
+      else{
+        data["sensors"][index][attr][configname] = event.target.value;
+        
+        }
         this.setState({ data });
       };
+      // handleSensorConfigChange = (index,attr) => (event, newValue) => {
+      //   console.log("handleSensorConfigChange: ",event.target,newValue);
+      //   const { data } = this.state;
+      //   data["sensors"][index]["config"][attr] = event.target.value;
+      //   this.setState({ data });
+      // };
 
       handleCloudChange = (attr) => (event, newValue) => {
         console.log("handleSensorChange: ",event.target,newValue);

@@ -21,6 +21,7 @@
 // Connect GND to Ground
 // Connect SCL to i2c clock - on '168/'328 Arduino Uno/Duemilanove/etc thats Analog 5
 // Connect SDA to i2c data - on '168/'328 Arduino Uno/Duemilanove/etc thats Analog 4
+// On ESP32 ; 
 // EOC is not used, it signifies an end of conversion
 // XCLR is a reset pin, also not used here
 
@@ -40,7 +41,7 @@ public:
 
     void begin()
     {
-            Serial.println("[BMPSensor] in begin()");
+        Serial.println("[BMPSensor] in begin()");
         running = bmp.begin();
         if (!running)
         {
@@ -51,7 +52,7 @@ public:
 
      float getValue()
     {
-        if (!running)
+        if (!running || (running = bmp.begin()) )
         {
             Serial.println("Could not find a valid BMP085 sensor, check wiring!");
             return 0;
@@ -89,7 +90,7 @@ public:
 }
 
 int getValuesAsJson(char* dest){
-        if (!running)
+        if (!running || (running = bmp.begin()) )       
         {
             Serial.println("Could not find a valid BMP085 sensor, check wiring!");
             return 0;
