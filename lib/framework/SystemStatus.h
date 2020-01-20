@@ -3,6 +3,7 @@
 
 #include <AsyncJson.h>
 #include <ESPAsyncWebServer.h>
+#include <SPIFFS.h>
 #include <SecurityManager.h>
 
 #define MAX_ESP_STATUS_SIZE 1024
