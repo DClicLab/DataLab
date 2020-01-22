@@ -20,6 +20,7 @@ const size_t CAPACITY = JSON_OBJECT_SIZE(40);
 StaticJsonDocument<CAPACITY> doc;
 JsonObject sensorsJValues = doc.to<JsonObject>();
 
+bool busy;
 const char* driverList[] = {"random", "dht11temp"};
 
 CSensor* DemoProject::getSensor(JsonObject& sensorConf) {
@@ -68,7 +69,8 @@ DemoProject::DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securi
   });
 
   server->on("/getjson", HTTP_GET, [](AsyncWebServerRequest* request) {
-    
+    Serial.println("This can take some time...");
+    busy =true;
     int id = 0;
     time_t ts = storage.currentTS;
     if (request->hasParam("id"))
@@ -85,8 +87,13 @@ DemoProject::DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securi
 
           return storage.readAsJsonStream(id, ts, buffer, maxLen, index);
         });
-
+    request->onDisconnect([] {
+        // free resources
+        Serial.println("Request completed, back to sensor work");
+        busy=false;
+    });
     request->send(response);
+
   });
 }
 
@@ -106,14 +113,16 @@ void DemoProject::start() {
       sensor->begin();
 
       Serial.printf("Attaching Sensor %s, interval: %d\n", sensor->name, sensor->interval);
-      ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
+      //ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
       Serial.println("Done attaching sensor");
+      
     }
     i++;
   }
   Serial.println("Done Adding sensors");
   // do whatever is required to react to the new settings
 }
+
 void DemoProject::onConfigUpdated() {
   reconfigureTheService();
 }
@@ -143,8 +152,10 @@ time_t DemoProject::getNow() {
 
 void DemoProject::loop() {
 
-  while (queue.size() > 0) {
-    CSensor* currentSensor = sensorList[queue.top()];
+  while ((queue.size() > 0) && (!busy)) {
+    int sensorID = queue.top();
+    queue.pop();
+    CSensor* currentSensor = sensorList[sensorID];
     if (currentSensor->enabled) {
       Serial.printf("Getting value for %s\n", currentSensor->name);
       char buffer[256];
@@ -170,7 +181,7 @@ void DemoProject::loop() {
       }
     } else {
       Serial.println("Disabled.");
-      sensorsJValues.remove(sensorList[queue.top()]->name);
+      sensorsJValues.remove(sensorList[sensorID]->name);
     }
 
     String ret;
@@ -180,8 +191,7 @@ void DemoProject::loop() {
     if (cloudService != NULL && cloudService->enabled) {
       cloudService->publishValue(ret.c_str());
     }
-
-    queue.pop();
+    
   }
 
   cloudService->loop();
