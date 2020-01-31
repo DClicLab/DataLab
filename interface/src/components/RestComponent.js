@@ -129,6 +129,8 @@ export const restComponent = (endpointUrl, FormComponent) => {
       handleNewSensor= (event) => {
         console.log("New sensor: ");
         const { data } = this.state;
+        if (!data.contains("sensors"))
+          data["sensors"] = [];
         data["sensors"].push( {
           "name":"New sensor",
           "driver":"",

@@ -4,7 +4,10 @@
 #include <AdminSettingsService.h>
 #include "CSensor.h"
 #include "CloudService.h"
+
 #include "MQTTService.h"
+#include "HTTPService.h"
+
 
 #define BLINK_LED 2
 #define MAX_DELAY 1000
@@ -29,6 +32,7 @@ class DemoProject : public AdminSettingsService {
     void onConfigUpdated();
     void loop();
     void start();
+    void processPV(const char* keyname, time_t now,float val);
     //CSensor* getSensor(const char* driverName,CSensorParams params);
     CSensor* getSensor(JsonObject& config);
     
@@ -41,7 +45,7 @@ class DemoProject : public AdminSettingsService {
   protected:
     CSensor* sensorList[5];
     //CSensorParams* sensorParamsList[5];
-    MQTTService* cloudService;
+    CloudService* cloudService;
     
     void readFromJsonObject(JsonObject& root);
     void writeToJsonObject(JsonObject& root);

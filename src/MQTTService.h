@@ -1,12 +1,11 @@
 #define MQTT_SOCKET_TIMEOUT 1
 #include <PubSubClient.h>
 #include "CloudService.h"
+#include <TimeLib.h>
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
-#include <ESPAsyncTCP.h>
 #elif defined(ESP_PLATFORM)
 #include <WiFi.h>
-#include <AsyncTCP.h>
 #endif
 
 class MQTTService : public CloudService
@@ -16,7 +15,7 @@ private:
     
     
 public:
-    MQTTService(std::string host, std::string credentials, std::string format, std::string target);
+    MQTTService(const char* host, const char* credentials, const char* format, const char* target);
     void publishValue(const char * message);
     void loop();
     bool reconnect();

@@ -31,7 +31,7 @@ public:
     
     DHT11Sensor( JsonObject& sensorConf): CSensor(sensorConf){
         pin = sensorConf["pin"].as<int>();
-        dhtSensor = DHT(pin, DHT11,6);
+        dhtSensor = DHT(pin, DHT11);
     };
 
     void begin()
@@ -77,5 +77,7 @@ public:
         return t;
     };
 };
+
+
 
 #endif // DHT11Sensor

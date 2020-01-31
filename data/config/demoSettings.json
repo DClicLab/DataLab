@@ -3,36 +3,40 @@
     {
       "name":"Room1 Temp",
       "driver":"random",
-      "min":"10",
-      "max":"35",
-      "unit":"°",
+      "config":{
+        "min":"-10",
+        "max":"35"
+      },
       "interval":2,
       "enabled":"true"
     },
     {
       "name":"Ext temp",
       "driver":"random",
-      "min":"-10",
-      "max":"20",
-      "unit":"°",
-      "interval":3,
+      "config":{
+        "min":"0",
+        "max":"20"
+      },
+      "interval":6,
       "enabled":"true"
     },
     {
-      "name":"Ext humidity",
+      "name":"Ext temp",
       "driver":"random",
-      "min":"-10",
-      "max":"20",
-      "enabled":"true",
-      "unit":"°",
-      "interval":5
+      "config":{
+        "min":"0",
+        "max":"20"
+      },
+      "interval":6,
+      "enabled":"true"
     }
   ],
   "cloudService":{
-    "driver":"MQTT",
-    "host":"192.168.1.46",
+    "driver":"HTTP",
+    "host":"tbio.dcliclab.fr:8080",
     "credentials":"",
     "format":"",
-    "target":"/capto"
+    "target":"/api/v1/mZRxTrmhcRlOaFT94nom/attributes",
+    "enabled":"true"
   }
 }

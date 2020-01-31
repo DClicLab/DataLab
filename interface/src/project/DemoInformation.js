@@ -39,12 +39,12 @@ const chartColors = {
 
 function processHistoricalData(csvstr){
 
-  csvstr.split("\n").map(function(row){
-    if (a!=""){
-    a=row.split(",");
-    dataList[a[0]].push({t:new Date(a[1] * 1000),y:a[2]}) }})
+  // csvstr.split("\n").map(function(row){
+  //   if (a!=""){
+  //   a=row.split(",");
+  //   dataList[a[0]].push({t:new Date(a[1] * 1000),y:a[2]}) }})
   
-  ;
+  // ;
 
 }
 

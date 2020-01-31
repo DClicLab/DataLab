@@ -1,14 +1,7 @@
 #ifndef CloudService_h
 #define CloudService_h
-//#include <WiFi.h>
-
-
-//with time
-//{"ts":1451649600512, "values":{"key1":"value1", "key2":"value2"}}
-
-//without time
-//{"key1":"value1", "key2":"value2"}
-
+#include <cstring>
+#include <WiFi.h>
 
 //TODO: add sensing of the wifi status as in the NTP lib.
 //publishvalue should then check the status and call the internal virtual function _publishvalue.
@@ -22,22 +15,31 @@ protected:
 
 
 public:
-    std::string _credentials;
-    std::string _host;
-    std::string _format;
-    std::string _target;
-    CloudService(std::string host, std::string credentials, std::string format, std::string target) {
-         
-         Serial.println("Instanciating cloud service");         
-         _host = host;
-         _credentials= credentials;
-         _format= format;
-         _target= target; 
+    char _credentials[40];
+    char _host[140];
+    char _format[40];
+    char _driver[16];
+    char _target[140];
+    bool _enabled;
+    
+    CloudService(const char* host, const char* credentials, const char* format, const char* target, bool enabled = true) {
+         _enabled = enabled;    
+         strncpy(_host , host,sizeof(_host ));
+         strncpy(_credentials, credentials,sizeof(_credentials));
+         strncpy(_format, format,sizeof(_format));
+         strncpy(_target, target,sizeof(_target)); 
     }
-    bool enabled;
-    virtual void loop(){};
-    void publishValue( const char* message =""){Serial.println("ERROR - publishValue() not implemented!");};
-    virtual ~CloudService() {};
+    virtual void loop()=0;
+    virtual void publishValue( const char* message =""){};
+    virtual ~CloudService(){};
 };
+
+
+
+
+
+
+
+
 
 #endif

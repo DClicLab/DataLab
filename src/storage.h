@@ -6,6 +6,7 @@
 
 #include <TimeLib.h>
 #include <map>
+#include <list>
 #include <ArduinoJson.h>
 #define TSDIFFSIZE 17 //bitfied for the diff in the timestamp with the current one
 using namespace std;
@@ -35,6 +36,7 @@ private:
     void loadIndex();
     void saveIndex();
     uint getNameForID(int id, char * buffer);
+    void updateFileList();
 
 public:
     time_t currentTS;

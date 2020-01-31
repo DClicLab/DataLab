@@ -127,13 +127,14 @@ function MQTTsAttributeForm(props) {
           label={"MQTT " + attributename  }
           id={"MQTT" + attributename }
           className={classes.textField}
-          value={MQTT[attributename]}//Why could this be undefined???
+          value={MQTT[attributename]}
           onChange={ handleCloudChange(attributename)}
         >
           <MenuItem value="undefined">
             <em>Select a driver</em>
           </MenuItem>
         <MenuItem value={"MQTT"}>MQTT</MenuItem>
+        <MenuItem value={"HTTP"}>HTTP</MenuItem>
       </Select>
       </FormControl>
     )
@@ -143,7 +144,7 @@ function MQTTsAttributeForm(props) {
       validators={getValidator(fieldType)}
       errorMessages={[attributename + ' is required']}
       name={"MQTT_" + attributename + index}
-      label={"MQTT " + attributename + (unit?" (in "+unit+")":'')}
+      label={"Cloud " + attributename + (unit?" (in "+unit+")":'')}
       id={"MQTT" + attributename + index}
       className={classes.textField}
       value={MQTT[attributename]}//Why could this be undefined???
