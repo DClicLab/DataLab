@@ -157,7 +157,7 @@ void DemoProject::processPV(const char* keyname, time_t now, float val) {
   if (cloudService != NULL && cloudService->_enabled) {
     char str[strlen(keyname) + 50];
     if (now>1000)//if we have correct time.
-      snprintf(str, sizeof(str), "{\"ts\":%lu,\"values\":{\"%s\":%f}}", keyname, val, now);
+      snprintf(str, sizeof(str), "{\"ts\":%lu,\"values\":{\"%s\":%f}}", now, keyname, val );
     else
       snprintf(str, sizeof(str), "{\"%s\":%f}", keyname, val);
     cloudService->publishValue(str);

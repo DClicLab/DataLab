@@ -23,10 +23,6 @@ void HTTPService::publishValue(const char* message){
   Serial.println("[HTTPService] - sending. Wifi connected.");
   //concat host and target
   //char buft[150];
-
-
-  char * pch;
-  Serial.println("[HTTPService] - 1");
   uint port=80;
   char chost[strlen(_host)+10];
   sscanf(_host, "%99[^:]:%99d", chost, &port);
