@@ -2,7 +2,7 @@
   "sensors":[
     {
       "name":"Room1 Temp",
-      "driver":"random",
+      "driver":"Random",
       "config":{
         "min":"-10",
         "max":"35"
@@ -11,18 +11,8 @@
       "enabled":"true"
     },
     {
-      "name":"Ext temp",
-      "driver":"random",
-      "config":{
-        "min":"0",
-        "max":"20"
-      },
-      "interval":6,
-      "enabled":"true"
-    },
-    {
-      "name":"Ext temp",
-      "driver":"random",
+      "name":"Ext temp1",
+      "driver":"Random",
       "config":{
         "min":"0",
         "max":"20"
@@ -30,13 +20,13 @@
       "interval":6,
       "enabled":"true"
     }
-  ],
+    ],
   "cloudService":{
     "driver":"HTTP",
     "host":"tbio.dcliclab.fr:8080",
     "credentials":"",
     "format":"",
-    "target":"/api/v1/mZRxTrmhcRlOaFT94nom/attributes",
+    "target":"/api/v1/mZRxTrmhcRlOaFT94nom/telemetry",
     "enabled":"true"
   }
 }

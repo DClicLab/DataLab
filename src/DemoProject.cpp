@@ -16,22 +16,25 @@ vector<int> queue;  // Sensors needed to be pulled
 
 Storage storage;
 
-const size_t CAPACITY = JSON_ARRAY_SIZE(3) + 4 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(4) + 2 * JSON_OBJECT_SIZE(5) +
-                        JSON_OBJECT_SIZE(6) + 350;
+const size_t CAPACITY =  2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(1) + 8*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(6) + 1000;
 StaticJsonDocument<CAPACITY> doc;
 JsonObject sensorsJValues = doc.to<JsonObject>();
 
 bool busy;
-const char* driverList[] = {"random", "dht11temp", "bmp"};
+// const char* driverList[] = {"random", "dht11temp", "bmp"};
+
+const char* driverList[] = {TestSensor::description,DHT11Sensor::description,BMPSensor::description};
+
+char errorBuff[400];
 
 CSensor* DemoProject::getSensor(JsonObject& sensorConf) {
-  if (strcmp(sensorConf["driver"], "random") == 0) {
+  if (strcmp(sensorConf["driver"], "Random") == 0) {
     return new TestSensor(sensorConf);
   }
-  if (strcmp(sensorConf["driver"], "bmp") == 0) {
+  if (strcmp(sensorConf["driver"], "BMP") == 0) {
     return new BMPSensor(sensorConf);
   }
-  if (strcmp(sensorConf["driver"], "dht11temp") == 0) {
+  if (strcmp(sensorConf["driver"], "DHT11") == 0) {
     return new DHT11Sensor(sensorConf);
   }
 
@@ -75,9 +78,9 @@ DemoProject::DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securi
     int id = 0;
     time_t ts = storage.currentTS;
     if (request->hasParam("id"))
-      id = atoi(request->getParam("id")->value().c_str());
+      id = request->getParam("id")->value().toInt();
     if (request->hasParam("ts"))
-      ts = atol(request->getParam("ts")->value().c_str());
+      ts = request->getParam("ts")->value().toDouble();
 
     AsyncWebServerResponse* response =
         request->beginChunkedResponse("text/plain", [&id, &ts](uint8_t* buffer, size_t maxLen, size_t index) -> size_t {
@@ -95,6 +98,16 @@ DemoProject::DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securi
     });
     request->send(response);
   });
+
+   server->on("/getErrors", HTTP_GET, [](AsyncWebServerRequest* request) {
+     if (strlen(errorBuff))
+      request->send(200, "text/plain", errorBuff);
+     else
+      request->send(200, "text/plain", "");
+     
+  });
+
+
 }
 
 void DemoProject::start() {
@@ -156,13 +169,13 @@ time_t DemoProject::getNow() {
 void DemoProject::processPV(const char* keyname, time_t now, float val) {
   if (cloudService != NULL && cloudService->_enabled) {
     char str[strlen(keyname) + 50];
-    if (now>1000)//if we have correct time.
-      snprintf(str, sizeof(str), "{\"ts\":%lu,\"values\":{\"%s\":%f}}", now, keyname, val );
-    else
+    // if (now>1000)//if we have correct time.
+    //   snprintf(str, sizeof(str), "{\"ts\":%lu,\"values\":{\"%s\":%f}}", now*1000, keyname, val );
+    // else
       snprintf(str, sizeof(str), "{\"%s\":%f}", keyname, val);
     cloudService->publishValue(str);
   }
-  Serial.printf("Calling stor on %s, %lu, %f\n",keyname, now, val);
+  Serial.printf("Calling store on %s, %lu, %f\n",keyname, now, val);
   storage.store(keyname, now, val);
 }
 
@@ -214,8 +227,7 @@ void DemoProject::readFromJsonObject(JsonObject& root)  //Unserialise json to co
   Serial.println("in read from json:");
   
   serializeJsonPretty(root,Serial);
-
-
+  
   JsonObject jcloud = root.getMember("cloudService");
   if (!jcloud.isNull()) {
     Serial.println("We have a cloud service ");
@@ -268,13 +280,15 @@ void DemoProject::readFromJsonObject(JsonObject& root)  //Unserialise json to co
   }
 }
 
-void DemoProject::writeToJsonObject(JsonObject& root) {
+void DemoProject::writeToJsonObject(JsonObject& root) {// Serialize conf to JSON
   Serial.println("in write to json");
   JsonArray driverJList = root.createNestedArray("drivers");
   for (const char* driver : driverList) {
     if (driver == NULL)
       continue;
-    driverJList.add(driver);
+    StaticJsonDocument<200> doc;
+    deserializeJson(doc,driver);
+    driverJList.add(doc);
   }
 
   JsonObject jcloud = root.createNestedObject("cloudService");
@@ -296,4 +310,14 @@ void DemoProject::writeToJsonObject(JsonObject& root) {
       sensor->getConfig(jsensor);
     }
   }
+  Serial.println("Done serializing conf:");
+  serializeJsonPretty(root,Serial);
+
+
+
+}
+void DemoProject::applyDefaultConfig() {//should load default file.
+  DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
+  JsonObject root = jsonDocument.to<JsonObject>();
+  readFromJsonObject(root);
 }

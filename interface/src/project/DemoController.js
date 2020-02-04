@@ -5,16 +5,21 @@ import { ENDPOINT_ROOT } from '../constants/Env';
 import SectionContent from '../components/SectionContent';
 import { restComponent } from '../components/RestComponent';
 import LoadingNotification from '../components/LoadingNotification';
-
+import { withSnackbar } from 'notistack';
+import { green } from '@material-ui/core/colors';
+import FormGroup from '@material-ui/core/FormGroup';
 import Button from '@material-ui/core/Button';
-import Typography from '@material-ui/core/Typography';
-import Slider from '@material-ui/core/Slider';
 import { makeStyles } from '@material-ui/core/styles';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import SelectValidator from '@material-ui/core/Select';
+
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
+import CheckboxValidator from '@material-ui/core/Checkbox';
+
 import { array } from 'prop-types';
 
 
@@ -38,11 +43,17 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-
+return withSnackbar(
 class DemoController extends Component {
   componentDidMount() {
+    
     this.props.loadData();
+
+
+
+
   }
+
 
   componentDidUpdate(){
     console.log("got an update",this.props.data);
@@ -62,7 +73,7 @@ class DemoController extends Component {
           fetched={fetched}
           errorMessage={errorMessage}
           render={() =>
-            <div>
+            <FormGroup row>
             {/* <DemoControllerForm
               demoSettings={data}
               onReset={loadData}
@@ -77,13 +88,14 @@ class DemoController extends Component {
               handleRemoveSensor={handleRemoveSensor}
             />
 
-          </div>
+          </FormGroup>
           }
         />
       </SectionContent>
     )
   }
 }
+);
 
 
 
@@ -101,10 +113,11 @@ function SensorsControllerForm(props) {
       
           <SensorControllerForm
           sensor = {sensor}
-          drivers = {demoSettings["drivers"]}
+          demoSettings = {demoSettings}
           handleSensorChange={handleSensorChange}
           handleRemoveSensor={handleRemoveSensor}
           index = {index}
+          key = {sensor.name}
           />
     
     </div>
@@ -121,14 +134,14 @@ function SensorsControllerForm(props) {
 }
 
 function SensorControllerForm(props) {
-  const { sensor, handleSensorChange, index ,handleRemoveSensor, drivers} = props;
+  const { sensor, handleSensorChange, index ,handleRemoveSensor, demoSettings} = props;
   const classes = useStyles();
 
   return (
     <>
-    <SensorsAttributeForm attributename="name" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="enabled" sensor={sensor} fieldType="bool" handleSensorChange={handleSensorChange} index={index}/>
-    <SensorsAttributeForm attributename="driver" sensor={sensor}  fieldType="driver" drivers={drivers} handleSensorChange={handleSensorChange} index={index}/>
+    <SensorsAttributeForm attributename="name" sensor={sensor} fieldType="string" handleSensorChange={handleSensorChange} index={index}/>
+    <SensorsAttributeForm attributename="driver" sensor={sensor}  fieldType="driver" demoSettings={demoSettings} handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="interval" sensor={sensor} fieldType="int" unit="sec" handleSensorChange={handleSensorChange} index={index}/>
     <SensorsAttributeForm attributename="config" sensor={sensor} fieldType="config" handleSensorChange={handleSensorChange} index={index}/>
     <Button color="secondary" className={classes.button} onClick={() => { handleRemoveSensor(index)}}>
@@ -147,7 +160,7 @@ function getValidator(type){
 }
 
 function SensorsAttributeForm(props) {
-  const { sensor, index, attributename, handleSensorChange,fieldType,drivers } = props;
+  const { sensor, index, attributename, handleSensorChange,fieldType,demoSettings } = props;
   const classes = useStyles();
   console.log("classes",classes);
   if (attributename=="config"){
@@ -161,6 +174,7 @@ function SensorsAttributeForm(props) {
       value={sensor[attributename][key]}//Why could this be undefined???
       onChange={ handleSensorChange(index,attributename,key)}
       margin="normal"
+      disabled = {!sensor["enabled"]}
       />
         
     
@@ -173,7 +187,8 @@ function SensorsAttributeForm(props) {
 
   if (attributename=="driver"){
     return (
-      <FormControl key={index}>
+      <FormControl       disabled = {!sensor["enabled"]}
+      >
         <FormHelperText>{attributename}</FormHelperText>
       {/* <InputLabel id="demo-simple-select-label"></InputLabel> */}
       <SelectValidator
@@ -182,20 +197,37 @@ function SensorsAttributeForm(props) {
           id={"sensor" + attributename + index}
           className={classes.selectField}
           value={sensor[attributename]}//Why could this be undefined???
-          onChange={ handleSensorChange(index,attributename)}
+          onChange={ handleSensorChange(index,attributename,demoSettings)}
         >
           <MenuItem value="undefined">
             <em>Select a driver</em>
           </MenuItem>
-          {drivers.map((name)=> (
+          {demoSettings["drivers"].map((driverdesc)=> (
             
-            <MenuItem value={name}>{name}</MenuItem>
-              
-          
+            <MenuItem key={driverdesc.name} value={driverdesc.name}>{driverdesc.name}</MenuItem>
           
           ))}
       </SelectValidator>
       </FormControl>
+    )
+  }
+  if (fieldType === "bool"){
+    return(
+      <FormControlLabel
+      control={
+        <Checkbox
+        name={"sensor_" + attributename + index}
+        label={"Sensor " + attributename }
+        id={"sensor" + attributename + index}
+        className={classes.textField}
+        checked={sensor[attributename]}
+        onChange={handleSensorChange(index,attributename)}
+        margin="normal"
+        color="primary"
+        />
+      }
+      label="Enabled"
+    />
     )
   }
   return (
@@ -209,6 +241,7 @@ function SensorsAttributeForm(props) {
       value={sensor[attributename]}//Why could this be undefined???
       onChange={ handleSensorChange(index,attributename)}
       margin="normal"
+      disabled = {!sensor["enabled"]}
       />
   );
 }

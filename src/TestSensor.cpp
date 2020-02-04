@@ -19,8 +19,8 @@ public:
         Serial.printf("Creating random sensor with min: %d and max:%d\n",minVal,maxVal);
     };
     
-    const char* defaultConfig = "{\"min\":0,\"max\":95}";
-
+    static constexpr const char*  description = "{\"name\":\"Random\",\"conf\":{\"min\":0,\"max\":95}}\"";
+    
     void begin()
     {
         Serial.printf("we are starting the random sensor with min: %d and max:%d\n",minVal,maxVal);

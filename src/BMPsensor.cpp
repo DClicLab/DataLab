@@ -32,6 +32,7 @@ private:
     bool running;
 public:
 
+    static constexpr const char*  description = "{\"name\":\"BMP\",\"conf\":{\"sdaPin\":21,\"sclPin\":22}}\"";
 
     BMPSensor(){};
     

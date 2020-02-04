@@ -10,12 +10,40 @@ import DemoMQTT from './DemoMQTT';
 
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
+import { withSnackbar } from 'notistack';
 
+export const DEMO_SETTINGS_ERRORS = ENDPOINT_ROOT + "../getErrors";
+
+return withSnackbar(
 class DemoProject extends Component {
 
   handleTabChange = (event, path) => {
     this.props.history.push(path);
   };
+
+
+  componentDidMount() {
+    //    this.props.loadData();
+        window.setInterval(() => {
+          this.checkErrors();
+        }, 2000)
+      }
+
+  checkErrors(){
+    fetch(DEMO_SETTINGS_ERRORS)
+      .then(res =>  {
+        this.props.enqueueSnackbar(res, {
+          variant: 'error',
+        });
+        },
+        (error) => {
+          // this.setState({
+          //   isLoaded: true,
+          //   error
+          // });
+        });
+  }
+
 
   render() {
     return (
@@ -36,5 +64,5 @@ class DemoProject extends Component {
   }        
 
 }
-
+)
 export default DemoProject;

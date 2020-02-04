@@ -12,7 +12,7 @@
  * files this could be made configurable fairly simply, it's exposed on
  * AsyncJsonWebHandler with a setter.
  */
-#define MAX_SETTINGS_SIZE 1024
+#define MAX_SETTINGS_SIZE 1536
 
 /*
  * Mixin for classes which need to save settings to/from a file on the the file system as JSON.
@@ -53,6 +53,7 @@ class SettingsPersistence {
       // Protect against bad data uploaded to file system
       // We never expect the config file to get very large, so cap it.
       size_t size = configFile.size();
+
       if (size <= MAX_SETTINGS_SIZE) {
         DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
         DeserializationError error = deserializeJson(jsonDocument, configFile);

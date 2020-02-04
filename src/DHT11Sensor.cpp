@@ -28,8 +28,11 @@ private:
     int pin;
 
 public:
-    
+
+    static constexpr const char*  description = "{\"name\":\"DHT11\",\"conf\":{\"Pin\":33}}\"";
+
     DHT11Sensor( JsonObject& sensorConf): CSensor(sensorConf){
+        
         pin = sensorConf["pin"].as<int>();
         dhtSensor = DHT(pin, DHT11);
     };

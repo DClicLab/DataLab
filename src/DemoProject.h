@@ -32,6 +32,7 @@ class DemoProject : public AdminSettingsService {
     void onConfigUpdated();
     void loop();
     void start();
+    void applyDefaultConfig();
     void processPV(const char* keyname, time_t now,float val);
     //CSensor* getSensor(const char* driverName,CSensorParams params);
     CSensor* getSensor(JsonObject& config);

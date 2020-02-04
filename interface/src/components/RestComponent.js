@@ -56,7 +56,7 @@ export const restComponent = (endpointUrl, FormComponent) => {
             this.props.enqueueSnackbar("Problem fetching: " + errorMessage, {
               variant: 'error',
             });
-            this.setState({ data: null, fetched: true, errorMessage  });
+            this.setState({ data: null, fetched: true, errorMessage });
           });
       }
 
@@ -85,7 +85,7 @@ export const restComponent = (endpointUrl, FormComponent) => {
             this.props.enqueueSnackbar("Problem saving: " + errorMessage, {
               variant: 'error',
             });
-            this.setState({ data: null, fetched: true, errorMessage  });
+            this.setState({ data: null, fetched: true, errorMessage });
           });
       }
 
@@ -93,22 +93,30 @@ export const restComponent = (endpointUrl, FormComponent) => {
         console.log("in handleValueChange");
         console.log(this.state);
         console.log(event.target);
-        console.log("data:",this.state);
+        console.log("data:", this.state);
 
         const { data } = this.state;
         data[name] = event.target.value;
         this.setState({ data });
       };
 
-      handleSensorChange = (index,attr, configname) => (event, newValue) => {
-        console.log("handleSensorChange: ",event.target,newValue);
+
+      handleSensorChange = (index, attr, configname) => (event, newValue) => {
+        console.log("handleSensorChange: ", event.target, newValue);
         const { data } = this.state;
-        if (configname == null){
-        data["sensors"][index][attr] = event.target.value;
-      }
-      else{
-        data["sensors"][index][attr][configname] = event.target.value;
-        
+        if (configname == null) {
+          data["sensors"][index][attr] = (event.target.type === "checkbox"?event.target.checked:event.target.value);
+          
+        }
+        else if (attr == "driver"){
+          data["sensors"][index][attr] = event.target.value;
+          data["sensors"][index]["config"] = configname["drivers"].filter(obj => {
+            return obj.name === event.target.value
+          })[0]["conf"];
+        }
+        else {
+          data["sensors"][index][attr][configname] = event.target.value;
+
         }
         this.setState({ data });
       };
@@ -120,30 +128,28 @@ export const restComponent = (endpointUrl, FormComponent) => {
       // };
 
       handleCloudChange = (attr) => (event, newValue) => {
-        console.log("handleSensorChange: ",event.target,newValue);
+        console.log("handleSensorChange: ", event.target, newValue);
         const { data } = this.state;
         data["cloudService"][attr] = event.target.value;
         this.setState({ data });
       };
 
-      handleNewSensor= (event) => {
+      handleNewSensor = (event) => {
         console.log("New sensor: ");
         const { data } = this.state;
-        if (!data.contains("sensors"))
+        if (data.sensors == null)
           data["sensors"] = [];
-        data["sensors"].push( {
-          "name":"New sensor",
-          "driver":"",
-          "min":"",
-          "max":"",
-          "unit":"",
-          "interval":""
+        data["sensors"].push({
+          "name": "New sensor",
+          "driver": "Random",
+          "config": { "min": 0, "max": 30 },
+          "interval": ""
         });
         this.setState({ data });
       };
 
-      handleRemoveSensor= (index) => {
-        console.log("remove sensor: ",index);
+      handleRemoveSensor = (index) => {
+        console.log("remove sensor: ", index);
         const { data } = this.state;
         data["sensors"].splice(index, 1);
         this.setState({ data });

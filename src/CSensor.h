@@ -33,7 +33,7 @@ private:
     /* data */
 public:
     CSensor();
-
+    static constexpr const char* description="";
     CSensor(JsonObject& sensorConf)
         :enabled(sensorConf["enabled"].as<bool>()),interval(sensorConf["interval"].as<int>())
     {
