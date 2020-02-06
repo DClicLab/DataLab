@@ -25,37 +25,52 @@
 // EOC is not used, it signifies an end of conversion
 // XCLR is a reset pin, also not used here
 
-class BMPSensor : public CSensor
+class BMP180Sensor : public CSensor
 {
 private:
     Adafruit_BMP085 bmp;
+    ushort _sda = -1;
+    ushort _scl = -1;
     bool running;
 public:
 
-    static constexpr const char*  description = "{\"name\":\"BMP\",\"conf\":{\"sdaPin\":21,\"sclPin\":22}}\"";
+    static constexpr const char*  description = "{\"name\":\"BMP180\",\"conf\":{\"sdaPin\":-1,\"sclPin\":-1}}\"";
 
-    BMPSensor(){};
+    BMP180Sensor(){};
     
-    BMPSensor( JsonObject& sensorConf): CSensor(sensorConf){
+    BMP180Sensor( JsonObject& sensorConf): CSensor(sensorConf){
         //no need for extra config
+        _sda = sensorConf["config"]["sdaPin"].as<int>();
+        _scl = sensorConf["config"]["sclPin"].as<int>();
     };
 
     void begin()
     {
         Serial.println("[BMPSensor] in begin()");
+        if(_sda != -1 && _scl != -1){
+            Wire.begin(_sda,_scl);
+        }
         running = bmp.begin();
         if (!running)
         {
-            Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+            Serial.printf("On sda:%d sdc:%d : ",_sda,_scl);
+            Serial.println("Could not find a valid BMP085/180 sensor, check wiring!");
         }
     }
-
+    // void getConfig(JsonObject& sensorConf){
+    //     Serial.println("In getconfig for test.");
+    //     CSensor::getConfig(sensorConf);//get base stuff,
+    //     JsonObject config= sensorConf.createNestedObject("config");// add specific config
+    //     config["sdaPin"] = _sda;
+    //     config["sclPin"] = _scl;
+    //     sensorConf["default"] = defaultConfig;
+    // }
 
      float getValue()
     {
         if (!running || (running = bmp.begin()) )
         {
-            Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+            Serial.println("Could not find a valid BMP085/180 sensor, check wiring!");
             return 0;
         }
     

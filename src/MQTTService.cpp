@@ -40,7 +40,7 @@ void MQTTService::publishValue(const char* message) {
   };
 void taskConnect(ConnectParams* psclient, const char* creds) {
   connecting = true;
-  psclient->client->connect("captoClient",psclient->user,"");
+  psclient->client->connect("datalab2",psclient->user,"");
   connecting = false;
   vTaskDelete(NULL);
 }

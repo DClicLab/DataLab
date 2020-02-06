@@ -91,34 +91,44 @@ void NTPSettingsService::onStationModeDisconnected(const WiFiEventStationModeDis
 }
 #endif
 
+
+time_t getTim() {
+  time_t now;
+  time(&now);
+  return now;
+}
+
+
 void NTPSettingsService::configureNTP() {
   Serial.println("Configuring NTP...");
-
+  configTime(3600,3600,"pool.ntp.org","fr.pool.ntp.org");
+  setSyncInterval(1800);
+  setSyncProvider(getTim);
   // disable sync
-  NTP.stop();
+//  NTP.stop();
 
   // enable sync
-  NTP.begin(_server);
-  NTP.setInterval(_interval);
+//  NTP.begin(_server);
+//  NTP.setInterval(_interval);
 }
 
 void NTPSettingsService::processSyncEvent(NTPSyncEvent_t ntpEvent) {
     
-    if (year(NTP.getLastNTPSync())>2035 ||year(NTP.getLastNTPSync())<2019 ){
-        Serial.print ("Got wrong NTP time: ");
-        Serial.println (NTP.getTimeDateString (NTP.getLastNTPSync ()));
-     _reconfigureNTP = true;
+    // if (year(NTP.getLastNTPSync())>2035 ||year(NTP.getLastNTPSync())<2019 ){
+    //     Serial.print ("Got wrong NTP time: ");
+    //     Serial.println (NTP.getTimeDateString (NTP.getLastNTPSync ()));
+    //  _reconfigureNTP = true;
       
-    }
+    // }
     
-    if (ntpEvent) {
-        Serial.print ("Time Sync error: ");
-        if (ntpEvent == noResponse)
-            Serial.println ("NTP server not reachable");
-        else if (ntpEvent == invalidAddress)
-            Serial.println ("Invalid NTP server address");
-    } else {
-        Serial.print ("Got NTP time: ");
-        Serial.println (NTP.getTimeDateString (NTP.getLastNTPSync ()));
-    }
+    // if (ntpEvent) {
+    //     Serial.print ("Time Sync error: ");
+    //     if (ntpEvent == noResponse)
+    //         Serial.println ("NTP server not reachable");
+    //     else if (ntpEvent == invalidAddress)
+    //         Serial.println ("Invalid NTP server address");
+    // } else {
+    //     Serial.print ("Got NTP time: ");
+    //     Serial.println (NTP.getTimeDateString (NTP.getLastNTPSync ()));
+    // }
 }

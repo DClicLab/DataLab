@@ -1,4 +1,4 @@
-#include <DemoProject.h>
+#include <DataLab.h>
 #include <ESP8266React.h>
 #include <FS.h>
 
@@ -6,7 +6,7 @@
 
 AsyncWebServer server(80);
 ESP8266React esp8266React(&server, &SPIFFS);
-DemoProject demoProject = DemoProject(&server, &SPIFFS, esp8266React.getSecurityManager());
+DataLab dataLab = DataLab(&server, &SPIFFS, esp8266React.getSecurityManager());
 
 void setup() {
 
@@ -21,26 +21,26 @@ void setup() {
   SPIFFS.begin();
 #endif
 
-  // start the framework and demo project
+  // start the framework and data project
   esp8266React.begin();
-  Serial.println("Starting demo");  
+  Serial.println("Starting data");  
 
-  // start the demo project
-  demoProject.begin();
+  // start the data project
+  dataLab.begin();
   
   Serial.println("Starting Server");  
 
   // start the server
   server.begin();
   
-  demoProject.start();
+  dataLab.start();
 }
 
 void loop() {
   // run the framework's loop function
   esp8266React.loop();
 
-  // run the demo project's loop function
-  demoProject.loop();
+  // run the data project's loop function
+  dataLab.loop();
   
 }

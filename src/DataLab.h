@@ -1,5 +1,5 @@
-#ifndef DemoProject_h
-#define DemoProject_h
+#ifndef DataLab_h
+#define DataLab_h
 
 #include <AdminSettingsService.h>
 #include "CSensor.h"
@@ -12,8 +12,8 @@
 #define BLINK_LED 2
 #define MAX_DELAY 1000
 
-#define DEMO_SETTINGS_FILE "/config/demoSettings.json"
-#define DEMO_SETTINGS_PATH "/rest/demoSettings"
+#define DATA_SETTINGS_FILE "/config/dataSettings.json"
+#define DATA_SETTINGS_PATH "/rest/dataSettings"
 
 
 //enum class CloudService { http, mqtt, adafruit, IFTTT, thingsboard};
@@ -24,15 +24,19 @@
 //  - timer
 //  - linked sensor values (array) +++
 
-class DemoProject : public AdminSettingsService {
+class DataLab : public AdminSettingsService {
  public:
-    DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
-    ~DemoProject();
+    DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
+    ~DataLab();
     void reconfigureTheService();
     void onConfigUpdated();
     void loop();
     void start();
     void applyDefaultConfig();
+    void addDriversToJsonObject(JsonObject& root);
+    void saveConf(JsonObject& root);
+    void readConf(JsonObject& root);
+
     void processPV(const char* keyname, time_t now,float val);
     //CSensor* getSensor(const char* driverName,CSensorParams params);
     CSensor* getSensor(JsonObject& config);

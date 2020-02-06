@@ -1,8 +1,9 @@
-#include "DemoProject.h"
+#include "DataLab.h"
 #include <NtpClientLib.h>
 #include <Ticker.h>
 #include <TimeLib.h>
 #include <Wire.h>
+#include "BMP280.cpp"
 #include "BMPSensor.cpp"
 #include "DHT11Sensor.cpp"
 //#include "FreeMemSensor.cpp"
@@ -16,23 +17,30 @@ vector<int> queue;  // Sensors needed to be pulled
 
 Storage storage;
 
-const size_t CAPACITY =  2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(1) + 8*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(6) + 1000;
+const size_t CAPACITY = 2 * JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(1) + 8 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) +
+                        3 * JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(6) + 1000;
 StaticJsonDocument<CAPACITY> doc;
 JsonObject sensorsJValues = doc.to<JsonObject>();
 
 bool busy;
 // const char* driverList[] = {"random", "dht11temp", "bmp"};
 
-const char* driverList[] = {TestSensor::description,DHT11Sensor::description,BMPSensor::description};
+const char* driverList[] = {TestSensor::description,
+                            DHT11Sensor::description,
+                            BMP180Sensor::description,
+                            BMP280Sensor::description};
 
 char errorBuff[400];
 
-CSensor* DemoProject::getSensor(JsonObject& sensorConf) {
+CSensor* DataLab::getSensor(JsonObject& sensorConf) {
   if (strcmp(sensorConf["driver"], "Random") == 0) {
     return new TestSensor(sensorConf);
   }
   if (strcmp(sensorConf["driver"], "BMP") == 0) {
-    return new BMPSensor(sensorConf);
+    return new BMP180Sensor(sensorConf);
+  }
+  if (strcmp(sensorConf["driver"], "BMP280") == 0) {
+    return new BMP280Sensor(sensorConf);
   }
   if (strcmp(sensorConf["driver"], "DHT11") == 0) {
     return new DHT11Sensor(sensorConf);
@@ -46,9 +54,9 @@ JsonObject getSensorJValues() {
   return sensorsJValues;
 }
 
-DemoProject::DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) :
-    AdminSettingsService(server, fs, securityManager, DEMO_SETTINGS_PATH, DEMO_SETTINGS_FILE) {
-  Serial.println("Starting Demo");
+DataLab::DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) :
+    AdminSettingsService(server, fs, securityManager, DATA_SETTINGS_PATH, DATA_SETTINGS_FILE) {
+  Serial.println("Starting Data");
   memset(sensorList, 0, sizeof(sensorList));
   // set http value responder
   server->on("/val", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -99,18 +107,15 @@ DemoProject::DemoProject(AsyncWebServer* server, FS* fs, SecurityManager* securi
     request->send(response);
   });
 
-   server->on("/getErrors", HTTP_GET, [](AsyncWebServerRequest* request) {
-     if (strlen(errorBuff))
+  server->on("/getErrors", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (strlen(errorBuff))
       request->send(200, "text/plain", errorBuff);
-     else
+    else
       request->send(200, "text/plain", "");
-     
   });
-
-
 }
 
-void DemoProject::start() {
+void DataLab::start() {
   memset(ticks, 0, sizeof(ticks));
   Serial.println("starting conf");
   storage.begin();
@@ -127,6 +132,7 @@ void DemoProject::start() {
 
       Serial.printf("Attaching Sensor %s, interval: %d\n", sensor->name, sensor->interval);
       ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
+      
       Serial.println("Done attaching sensor");
     }
     i++;
@@ -135,17 +141,17 @@ void DemoProject::start() {
   // do whatever is required to react to the new settings
 }
 
-void DemoProject::onConfigUpdated() {
+void DataLab::onConfigUpdated() {
   reconfigureTheService();
 }
 
-void DemoProject::reconfigureTheService() {
+void DataLab::reconfigureTheService() {
   Serial.println("reconfig");
   start();
   // do whatever is required to react to the new settings
 }
 
-void DemoProject::getValueForSensor(int i) {
+void DataLab::getValueForSensor(int i) {
   // adding sensor id to queue as we should not block a timer call
   Serial.printf("Timer rings for sensor %d\n", i);
   if (!queue.empty()) {
@@ -155,10 +161,10 @@ void DemoProject::getValueForSensor(int i) {
   queue.push_back(i);
 }
 
-DemoProject::~DemoProject() {
+DataLab::~DataLab() {
 }
 
-time_t DemoProject::getNow() {
+time_t DataLab::getNow() {
   if (year(now()) > 2035) {
     Serial.println("NTP Error - not returning date >2035. Returning 0 aka 1970.");
     return 0;
@@ -166,22 +172,39 @@ time_t DemoProject::getNow() {
   return now();
 }
 
-void DemoProject::processPV(const char* keyname, time_t now, float val) {
+void printLocalTime() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo, 100)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+
+  Serial.print(now());
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  time_t tnow;
+  time(&tnow);
+  setTime(tnow);
+  Serial.println(now());
+}
+void DataLab::processPV(const char* keyname, time_t now, float val) {
   if (cloudService != NULL && cloudService->_enabled) {
     char str[strlen(keyname) + 50];
     // if (now>1000)//if we have correct time.
     //   snprintf(str, sizeof(str), "{\"ts\":%lu,\"values\":{\"%s\":%f}}", now*1000, keyname, val );
     // else
-      snprintf(str, sizeof(str), "{\"%s\":%f}", keyname, val);
+    snprintf(str, sizeof(str), "{\"%s\":%f}", keyname, val);
     cloudService->publishValue(str);
   }
-  Serial.printf("Calling store on %s, %lu, %f\n",keyname, now, val);
+  Serial.printf("Calling store on %s, %lu, %f\n", keyname, now, val);
   storage.store(keyname, now, val);
 }
 
-void DemoProject::loop() {
+void DataLab::loop() {
   while ((queue.size() > 0) && (!busy)) {
-    int sensorID = queue.back(); queue.pop_back();
+    printLocalTime();
+
+    int sensorID = queue.back();
+    queue.pop_back();
     // queue.pop();
     CSensor* currentSensor = sensorList[sensorID];
     if (currentSensor->enabled) {
@@ -222,12 +245,15 @@ void DemoProject::loop() {
   }
 }
 
-void DemoProject::readFromJsonObject(JsonObject& root)  //Unserialise json to conf
+void DataLab::readFromJsonObject(JsonObject& root)  // Unserialise json to conf
 {
   Serial.println("in read from json:");
-  
-  serializeJsonPretty(root,Serial);
-  
+
+  serializeJsonPretty(root, Serial);
+  addDriversToJsonObject(root);
+
+  saveConf(root);
+
   JsonObject jcloud = root.getMember("cloudService");
   if (!jcloud.isNull()) {
     Serial.println("We have a cloud service ");
@@ -258,9 +284,11 @@ void DemoProject::readFromJsonObject(JsonObject& root)  //Unserialise json to co
     }
   }
 
-  // memset(sensorList, 0, sizeof(sensorList));
-  memset(ticks, 0, sizeof(ticks));
-
+  for (auto &&tick : ticks)
+  {    
+      tick.detach(); 
+  }
+  
   for (size_t i = 0; i < (sizeof(sensorList) / sizeof(CSensor*)); i++) {
     if (sensorList[i] != NULL) {
       Serial.println("Deleting sensor");
@@ -280,43 +308,86 @@ void DemoProject::readFromJsonObject(JsonObject& root)  //Unserialise json to co
   }
 }
 
-void DemoProject::writeToJsonObject(JsonObject& root) {// Serialize conf to JSON
-  Serial.println("in write to json");
+void DataLab::addDriversToJsonObject(JsonObject& root) {
+  if (root.containsKey("drivers"))  // driver list is already here
+    return;
   JsonArray driverJList = root.createNestedArray("drivers");
   for (const char* driver : driverList) {
     if (driver == NULL)
       continue;
     StaticJsonDocument<200> doc;
-    deserializeJson(doc,driver);
+    deserializeJson(doc, driver);
     driverJList.add(doc);
   }
-
-  JsonObject jcloud = root.createNestedObject("cloudService");
-  Serial.printf("driver: %s\n", cloudService->_driver);
-  jcloud["driver"] = cloudService->_driver;
-  Serial.printf("host: %s\n", cloudService->_host);
-  jcloud["host"] = cloudService->_host;
-  Serial.printf("credentials: %s\n", cloudService->_credentials);
-  jcloud["credentials"] = cloudService->_credentials;
-  Serial.printf("format: %s\n", cloudService->_format);
-  jcloud["format"] = cloudService->_format;
-  Serial.printf("target: %s\n", cloudService->_target);
-  jcloud["target"] = cloudService->_target;
-
-  JsonArray sensorJList = root.createNestedArray("sensors");
-  for (CSensor* sensor : sensorList) {
-    if (sensor != NULL) {
-      JsonObject jsensor = sensorJList.createNestedObject();
-      sensor->getConfig(jsensor);
-    }
-  }
-  Serial.println("Done serializing conf:");
-  serializeJsonPretty(root,Serial);
-
-
-
 }
-void DemoProject::applyDefaultConfig() {//should load default file.
+
+void DataLab::saveConf(JsonObject& root) {
+  // serialize it to filesystem
+  File configFile = _fs->open(_filePath, "w");
+
+  // failed to open file, return false
+  if (!configFile) {
+    return;
+  }
+
+  serializeJson(root, configFile);
+  configFile.close();
+}
+void DataLab::readConf(JsonObject& root) {
+  File configFile = _fs->open(_filePath, "r");
+
+  // use defaults if no config found
+  if (configFile) {
+    // Protect against bad data uploaded to file system
+    // We never expect the config file to get very large, so cap it.
+    size_t size = configFile.size();
+
+    if (size <= MAX_SETTINGS_SIZE) {
+      DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
+      DeserializationError error = deserializeJson(jsonDocument, configFile);
+      if (error == DeserializationError::Ok && jsonDocument.is<JsonObject>()) {
+        root.set(jsonDocument.as<JsonObject>());
+        // root = jsonDocument.as<JsonObject>();
+      }
+    }
+    configFile.close();
+  }
+}
+
+void DataLab::writeToJsonObject(JsonObject& root) {  // Serialize conf to JSON
+
+  readConf(root);
+  addDriversToJsonObject(root);
+  Serial.println("Done serializing conf:");
+  serializeJsonPretty(root, Serial);
+  return;
+
+  // why don't we just return the json file?
+  // as/if we save all changes in the json file...
+
+  // JsonObject jcloud = root.createNestedObject("cloudService");
+  // Serial.printf("driver: %s\n", cloudService->_driver);
+  // jcloud["driver"] = cloudService->_driver;
+  // Serial.printf("host: %s\n", cloudService->_host);
+  // jcloud["host"] = cloudService->_host;
+  // Serial.printf("credentials: %s\n", cloudService->_credentials);
+  // jcloud["credentials"] = cloudService->_credentials;
+  // Serial.printf("format: %s\n", cloudService->_format);
+  // jcloud["format"] = cloudService->_format;
+  // Serial.printf("target: %s\n", cloudService->_target);
+  // jcloud["target"] = cloudService->_target;
+
+  // JsonArray sensorJList = root.createNestedArray("sensors");
+  // for (CSensor* sensor : sensorList) {
+  //   if (sensor != NULL) {
+  //     JsonObject jsensor = sensorJList.createNestedObject();
+  //     sensor->getConfig(jsensor);
+  //   }
+  // }
+  // Serial.println("Done serializing conf:");
+  // serializeJsonPretty(root,Serial);
+}
+void DataLab::applyDefaultConfig() {  // should load default file.
   DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
   JsonObject root = jsonDocument.to<JsonObject>();
   readFromJsonObject(root);

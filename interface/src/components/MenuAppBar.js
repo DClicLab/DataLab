@@ -78,7 +78,22 @@ const styles = theme => ({
       marginLeft: theme.spacing(2),
     }
   },
+  logo: {
+    textAlign: "center",
+    padding: theme.spacing(2),
+    paddingTop: "200px",
+    backgroundImage: 'url("/app/icon.png")',
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "50% " + theme.spacing(2) + "px",
+    backgroundSize: "auto 100px",
+    width: "100%",
+    position: "fixed",
+    bottom:"0%",
+    left: "-50%",
+    marginLeft: "125px",
+  },
 });
+
 
 class MenuAppBar extends React.Component {
   state = {
@@ -111,7 +126,7 @@ class MenuAppBar extends React.Component {
     const drawer = (
       <div>
         <Toolbar>
-          <Typography variant="h6" color="primary">
+          <Typography variant="h6" color="primary" >
             {PROJECT_NAME}
           </Typography>
           <Divider absolute />
@@ -150,6 +165,7 @@ class MenuAppBar extends React.Component {
             </ListItemIcon>
             <ListItemText primary="System" />
           </ListItem>
+          <ListItem className = {classes.logo}/>
         </List>
       </div>
     );

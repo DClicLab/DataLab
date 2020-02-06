@@ -13,8 +13,8 @@ import SectionContent from '../components/SectionContent';
 
 import Chart from 'chart.js';
 
-export const DEMO_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "demoSettings";
-export const DEMO_SETTINGS_ENDPOINT_VAL = ENDPOINT_ROOT + "../val";
+export const DATA_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "dataSettings";
+export const DATA_SETTINGS_ENDPOINT_VAL = ENDPOINT_ROOT + "../val";
 
 const styles = theme => ({
   fileTable: {
@@ -65,7 +65,7 @@ function processSensorData(result,dataList){
 }
 
 function getData(dataList){
-  fetch(DEMO_SETTINGS_ENDPOINT_VAL)
+  fetch(DATA_SETTINGS_ENDPOINT_VAL)
       .then(res => res.json())
       .then(
         (result) => {
@@ -84,7 +84,7 @@ function getData(dataList){
 
 
 
-class DemoInformation extends Component {
+class DataInformation extends Component {
   constructor(props) {
     super(props);
     
@@ -107,8 +107,8 @@ class DemoInformation extends Component {
     return (
       <SectionContent title="DataLab v2" titleGutter>
         <Typography variant="body1" paragraph>
-          This simple demo project allows you to control the blink speed of the built-in LED. 
-          It demonstrates how the esp8266-react framework may be extended for your own IoT project.
+          This simple data project allows you to control the blink speed of the built-in LED. 
+          It datanstrates how the esp8266-react framework may be extended for your own IoT project.
         </Typography>
         <Table className={classes.fileTable}>
           <TableHead>
@@ -124,7 +124,7 @@ class DemoInformation extends Component {
           <TableBody>
       
           {Object.entries(this.state.dataList).map((data,index) => (
-          <TableRow  className={classes.row}>
+          <TableRow key={index} className={classes.row}>
               <TableCell>
               <h3>{data[0]}</h3></TableCell>
               <TableCell>
@@ -141,7 +141,7 @@ class DemoInformation extends Component {
           </TableBody>
         </Table>
         <Typography variant="body1" paragraph>
-          See the project <a href="https://github.com/rjwats/esp8266-react/">README</a> for a full description of the demo project.
+          See the project <a href="https://github.com/rjwats/esp8266-react/">README</a> for a full description of the data project.
         </Typography>
       </SectionContent>
     )
@@ -225,4 +225,4 @@ class SensorChart2 extends React.Component {
   
 }
 
-export default withStyles(styles)(DemoInformation);
+export default withStyles(styles)(DataInformation);

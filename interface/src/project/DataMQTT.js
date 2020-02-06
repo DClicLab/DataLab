@@ -18,10 +18,10 @@ import Select from '@material-ui/core/Select';
 import { array } from 'prop-types';
 
 
-export const DEMO_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "demoSettings";
+export const DATA_SETTINGS_ENDPOINT = ENDPOINT_ROOT + "dataSettings";
 
 
-class DemoMQTT extends Component {
+class DataMQTT extends Component {
   componentDidMount() {
     this.props.loadData();
   }
@@ -41,7 +41,7 @@ class DemoMQTT extends Component {
           errorMessage={errorMessage}
           render={() =>
             <MQTTForm
-              demoSettings={data}
+              dataSettings={data}
               onReset={loadData}
               onSubmit={saveData}
               handleCloudChange={handleCloudChange}
@@ -64,7 +64,7 @@ const useStyles = makeStyles(theme => ({
 
 
 function MQTTForm(props) {
-  const { demoSettings, onSubmit, onReset, handleCloudChange, handleRemoveMQTT } = props;
+  const { dataSettings, onSubmit, onReset, handleCloudChange, handleRemoveMQTT } = props;
   const classes = useStyles();
 
   return (
@@ -72,7 +72,7 @@ function MQTTForm(props) {
 
      <ValidatorForm onSubmit={onSubmit}>      
           <MQTTControllerForm
-          MQTT = {demoSettings["cloudService"]}
+          MQTT = {dataSettings["cloudService"]}
           handleCloudChange={handleCloudChange}
           handleRemoveMQTT={handleRemoveMQTT}
           />
@@ -121,7 +121,7 @@ function MQTTsAttributeForm(props) {
     return (
       <FormControl className={classes.textField} key={index}>
         <FormHelperText>{attributename}</FormHelperText>
-      {/* <InputLabel id="demo-simple-select-label"></InputLabel> */}
+      {/* <InputLabel id="data-simple-select-label"></InputLabel> */}
       <Select
           name={"MQTT_" + attributename}
           label={"MQTT " + attributename  }
@@ -157,4 +157,4 @@ function MQTTsAttributeForm(props) {
 
 
 
-export default restComponent(DEMO_SETTINGS_ENDPOINT, DemoMQTT);
+export default restComponent(DATA_SETTINGS_ENDPOINT, DataMQTT);

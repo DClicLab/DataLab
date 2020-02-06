@@ -6,6 +6,8 @@
 #include <NtpClientLib.h>
 #include <TimeLib.h>
 
+#include <time.h>
+
 // default time server
 #define NTP_SETTINGS_SERVICE_DEFAULT_SERVER "pool.ntp.org"
 #define NTP_SETTINGS_SERVICE_DEFAULT_INTERVAL 3600

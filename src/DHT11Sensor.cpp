@@ -32,15 +32,18 @@ public:
     static constexpr const char*  description = "{\"name\":\"DHT11\",\"conf\":{\"Pin\":33}}\"";
 
     DHT11Sensor( JsonObject& sensorConf): CSensor(sensorConf){
-        
-        pin = sensorConf["pin"].as<int>();
-        dhtSensor = DHT(pin, DHT11);
+        serializeJsonPretty(sensorConf,Serial);
+        Serial.printf("Creating DHT11 sensor on pin %d\n", sensorConf["config"]["Pin"].as<int>());
+        pin = sensorConf["config"]["Pin"].as<int>();
+
     };
 
     void begin()
     {
-        pinMode(pin, OUTPUT);
-        Serial.println("we are starting the DHT11 sensor");
+        //pinMode(pin, OUTPUT);
+        Serial.printf("we are starting the DHT11 sensor, pin %d\n",pin);
+        dhtSensor = DHT(pin, DHT11);
+        
         dhtSensor.begin();
     };
 
@@ -80,7 +83,5 @@ public:
         return t;
     };
 };
-
-
 
 #endif // DHT11Sensor

@@ -50,13 +50,13 @@ public:
 
     const char* defaultConfig = "No default config";
 
-    virtual void getConfig(JsonObject& sensorConf){
-        sensorConf["driver"]= driver;
-        sensorConf["name"]= name;
-        sensorConf["interval"]= interval;
-        sensorConf["enabled"]= enabled;
-        //sensorConf["config"]= config;
-    }
+    // virtual void getConfig(JsonObject& sensorConf){
+    //     sensorConf["driver"]= driver;
+    //     sensorConf["name"]= name;
+    //     sensorConf["interval"]= interval;
+    //     sensorConf["enabled"]= enabled;
+    //     //sensorConf["config"]= config;
+    // }
 
     virtual float getValue() {return 0;};
     virtual int getValuesAsJson(char* buffer) 

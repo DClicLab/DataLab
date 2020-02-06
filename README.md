@@ -274,7 +274,7 @@ The following code creates the web server, esp8266React framework and the demo p
 ```cpp
 AsyncWebServer server(80);
 ESP8266React esp8266React(&server, &SPIFFS);
-DemoProject demoProject = DemoProject(&server, &SPIFFS, esp8266React.getSecurityManager());
+DataLab dataLab = DataLab(&server, &SPIFFS, esp8266React.getSecurityManager());
 ```
 
 Now in the `setup()` function the initialization is performed:
@@ -295,7 +295,7 @@ void setup() {
   esp8266React.begin();
 
   // start the demo project
-  demoProject.begin();
+  dataLab.begin();
 
   // start the server
   server.begin();
@@ -310,7 +310,7 @@ void loop() {
   esp8266React.loop();
 
   // run the demo project's loop function
-  demoProject.loop();
+  dataLab.loop();
 }
 ```
 
