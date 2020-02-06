@@ -1,6 +1,6 @@
 {
-  "ssid": "romiot",
-  "password": "RomIOT!!",
+  "ssid": "",
+  "password": "",
   "hostname": "esp32-react",
   "static_ip_config": false
 }
