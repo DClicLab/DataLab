@@ -107,17 +107,16 @@ class DataInformation extends Component {
     return (
       <SectionContent title="DataLab v2" titleGutter>
         <Typography variant="body1" paragraph>
-          This simple data project allows you to control the blink speed of the built-in LED. 
-          It datanstrates how the esp8266-react framework may be extended for your own IoT project.
+          This screen monitors the current values from your sensors.
         </Typography>
         <Table className={classes.fileTable}>
           <TableHead>
             <TableRow>
               <TableCell>
-                File
+                Sensor value
               </TableCell>
               <TableCell>
-                Description
+                
               </TableCell>
             </TableRow>
           </TableHead>

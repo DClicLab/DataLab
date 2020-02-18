@@ -25,6 +25,7 @@ JsonObject sensorsJValues = doc.to<JsonObject>();
 bool busy;
 // const char* driverList[] = {"random", "dht11temp", "bmp"};
 
+
 const char* driverList[] = {TestSensor::description,
                             DHT11Sensor::description,
                             BMP180Sensor::description,
@@ -61,9 +62,11 @@ DataLab::DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManage
   // set http value responder
   server->on("/val", HTTP_GET, [](AsyncWebServerRequest* request) {
     AsyncResponseStream* response = request->beginResponseStream("text/json");
-    serializeJson(doc, *response);
-    doc.clear();
-    sensorsJValues = doc.to<JsonObject>();
+    // serializeJson(doc, *response);
+    // doc.clear();
+    serializeJson(sensorsJValues, *response);
+    //doc.clear();
+    //sensorsJValues = doc.to<JsonObject>();
     request->send(response);
   });
 
@@ -215,6 +218,9 @@ void DataLab::loop() {
         StaticJsonDocument<200> sensorDoc;
         deserializeJson(sensorDoc, buffer);
         JsonObject sensorObj = sensorDoc.as<JsonObject>();
+
+        serializeJsonPretty(sensorObj, Serial);
+        
         for (JsonPair kvp : sensorObj) {
           int size = sizeof(kvp.key().c_str()) + sizeof(currentSensor->name) + 1;
           char keyname[size];
@@ -237,7 +243,7 @@ void DataLab::loop() {
     }
 
     String ret;
-    serializeJson(doc, ret);
+    serializeJson(sensorsJValues, ret);
     Serial.printf("JSON loop: %s\n", ret.c_str());
   }
   if (cloudService != NULL && cloudService->_enabled) {

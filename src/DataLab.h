@@ -24,7 +24,12 @@
 //  - timer
 //  - linked sensor values (array) +++
 
-class DataLab : public AdminSettingsService {
+
+class DummySettings {
+ 
+};
+
+class DataLab : public AdminSettingsService<DummySettings> {
  public:
     DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
     ~DataLab();

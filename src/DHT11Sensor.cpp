@@ -24,7 +24,6 @@ class DHT11Sensor : public CSensor
 private:
     /* data */
     DHT dhtSensor = DHT(3,DHT11); //Pin is not use here, pin is set in constructor.
-    uint32_t delayMS;
     int pin;
 
 public:
@@ -35,7 +34,6 @@ public:
         serializeJsonPretty(sensorConf,Serial);
         Serial.printf("Creating DHT11 sensor on pin %d\n", sensorConf["config"]["Pin"].as<int>());
         pin = sensorConf["config"]["Pin"].as<int>();
-
     };
 
     void begin()
@@ -43,7 +41,6 @@ public:
         //pinMode(pin, OUTPUT);
         Serial.printf("we are starting the DHT11 sensor, pin %d\n",pin);
         dhtSensor = DHT(pin, DHT11);
-        
         dhtSensor.begin();
     };
 
@@ -52,9 +49,12 @@ public:
     {
         float h = dhtSensor.readHumidity();
         float t = dhtSensor.readTemperature();
+        Serial.printf("DHT returned %f %f",h,t);
+
         if (isnan(h) || isnan(t))
         {
             Serial.println(F("Failed to read from DHT sensor!"));
+            dhtSensor.begin();
             return 0;
         }
         sprintf(buffer,"{\"humidity\":%f,\"temperature\":%f}",h,t);
