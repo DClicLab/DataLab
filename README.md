@@ -1,8 +1,6 @@
 # DataLab
 
-[![Build Status](https://travis-ci.org/rjwats/esp8266-react.svg?branch=master)](https://travis-ci.org/rjwats/esp8266-react)
-
-Based on [ESP8266-react](https://travis-ci.org/rjwats/esp8266-react)
+*Based on [ESP8266-react](https://travis-ci.org/rjwats/esp8266-react)*
 
 DataLab is a simple and extensible solution for data logging based on ESP32. It comes with an easy to use interface: just plug your sensors to your board, configure the web interface and voila your data is being logged locally and on any MQTT or HTTP online service. 
 
