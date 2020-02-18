@@ -6,7 +6,7 @@ Based on [ESP8266-react](https://travis-ci.org/rjwats/esp8266-react)
 
 DataLab is a simple and extensible solution for data logging based on ESP32. It comes with an easy to use interface: just plug your sensors to your board, configure the web interface and voila your data is being logged locally and on any MQTT or HTTP online service. 
 
-![Screenshots](/media/screenshots.png?raw=true "Screenshots") 
+(add screenshots here)
 
 ## Features
 
@@ -34,8 +34,8 @@ You will need the following before you can get started.
 
 ### Uploading the firmware
 
-The [release](release) includes an easy to use uploader.
-1. get the latest Zip [release](release)
+The [release](https://github.com/DClicLab/DataLab/releases/latest/) includes an easy to use uploader.
+1. get the latest [release](https://github.com/DClicLab/DataLab/releases/latest/)
 2. unzip everything in a folder
 3. connect your ESP32 to your computer
 4. run ESPUploader.exe
