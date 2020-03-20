@@ -6,7 +6,9 @@
 #include "BMP280.cpp"
 #include "BMPSensor.cpp"
 #include "DHT11Sensor.cpp"
-//#include "FreeMemSensor.cpp"
+
+#include "FreeMemSensor.cpp"
+#include "AnalogInSensor.cpp"
 #include "TestSensor.cpp"
 #include "storage.h"
 
@@ -23,13 +25,16 @@ StaticJsonDocument<CAPACITY> doc;
 JsonObject sensorsJValues = doc.to<JsonObject>();
 
 bool busy;
-// const char* driverList[] = {"random", "dht11temp", "bmp"};
 
-
+//Add all sensors here
 const char* driverList[] = {TestSensor::description,
                             DHT11Sensor::description,
                             BMP180Sensor::description,
-                            BMP280Sensor::description};
+                            BMP280Sensor::description,
+                            FreeMemSensor::description,
+                            AnalogInSensor::description,
+                            
+                            };
 
 char errorBuff[400];
 
@@ -46,6 +51,14 @@ CSensor* DataLab::getSensor(JsonObject& sensorConf) {
   if (strcmp(sensorConf["driver"], "DHT11") == 0) {
     return new DHT11Sensor(sensorConf);
   }
+  if (strcmp(sensorConf["driver"], "FreeMem") == 0) {
+    return new FreeMemSensor(sensorConf);
+  }
+  if (strcmp(sensorConf["driver"], "AnalogIn") == 0) {
+    return new AnalogInSensor(sensorConf);
+  }
+
+
 
   return new TestSensor(sensorConf);
   // Add here your custom sensor
@@ -269,11 +282,11 @@ void DataLab::readFromJsonObject(JsonObject& root)  // Unserialise json to conf
       Serial.println("done.");
     }
 
-    Serial.printf("jcloud[\"driver\"]: %s\n", jcloud["driver"].as<const char*>());
-    Serial.printf("jcloud[\"host\"]: %s\n", jcloud["host"].as<const char*>());
-    Serial.printf("jcloud[\"credentials\"]: %s\n", jcloud["credentials"].as<const char*>());
-    Serial.printf("jcloud[\"format\"]: %s\n", jcloud["format"].as<const char*>());
-    Serial.printf("jcloud[\"target\"]: %s\n", jcloud["target"].as<const char*>());
+    // Serial.printf("jcloud[\"driver\"]: %s\n", jcloud["driver"].as<const char*>());
+    // Serial.printf("jcloud[\"host\"]: %s\n", jcloud["host"].as<const char*>());
+    // Serial.printf("jcloud[\"credentials\"]: %s\n", jcloud["credentials"].as<const char*>());
+    // Serial.printf("jcloud[\"format\"]: %s\n", jcloud["format"].as<const char*>());
+    // Serial.printf("jcloud[\"target\"]: %s\n", jcloud["target"].as<const char*>());
 
     if (strcmp(jcloud["driver"], "MQTT") == 0) {
       Serial.println("MQTT service");
@@ -368,30 +381,6 @@ void DataLab::writeToJsonObject(JsonObject& root) {  // Serialize conf to JSON
   serializeJsonPretty(root, Serial);
   return;
 
-  // why don't we just return the json file?
-  // as/if we save all changes in the json file...
-
-  // JsonObject jcloud = root.createNestedObject("cloudService");
-  // Serial.printf("driver: %s\n", cloudService->_driver);
-  // jcloud["driver"] = cloudService->_driver;
-  // Serial.printf("host: %s\n", cloudService->_host);
-  // jcloud["host"] = cloudService->_host;
-  // Serial.printf("credentials: %s\n", cloudService->_credentials);
-  // jcloud["credentials"] = cloudService->_credentials;
-  // Serial.printf("format: %s\n", cloudService->_format);
-  // jcloud["format"] = cloudService->_format;
-  // Serial.printf("target: %s\n", cloudService->_target);
-  // jcloud["target"] = cloudService->_target;
-
-  // JsonArray sensorJList = root.createNestedArray("sensors");
-  // for (CSensor* sensor : sensorList) {
-  //   if (sensor != NULL) {
-  //     JsonObject jsensor = sensorJList.createNestedObject();
-  //     sensor->getConfig(jsensor);
-  //   }
-  // }
-  // Serial.println("Done serializing conf:");
-  // serializeJsonPretty(root,Serial);
 }
 void DataLab::applyDefaultConfig() {  // should load default file.
   DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
