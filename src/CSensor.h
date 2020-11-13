@@ -58,13 +58,14 @@ public:
     //     //sensorConf["config"]= config;
     // }
 
-    virtual float getValue() {return 0;};
+    virtual float getValue() {return NAN;};
     virtual int getValuesAsJson(char* buffer) 
         {
             Serial.println("no json");
             return 0;
         }
     virtual void begin() {};
+    virtual void loop() {};
     virtual ~CSensor(){};
 };
 

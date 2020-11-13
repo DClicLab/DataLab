@@ -12,7 +12,6 @@ void setup() {
 
   // start serial and filesystem
   Serial.begin(SERIAL_BAUD_RATE);
-
   Serial.println("Starting spiffs");
   // start the file system (must be done before starting the framework)
 #ifdef ESP32

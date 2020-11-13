@@ -30,6 +30,11 @@ public:
         pinMode(pin,INPUT);
     };
 
+    void loop(){
+        //do we need mesure? do we need to turn on the fan?
+        
+    }
+
     //This function is called to return the sensor value at every interval
     float getValue()
     {

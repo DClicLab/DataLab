@@ -26,15 +26,16 @@ JsonObject sensorsJValues = doc.to<JsonObject>();
 
 bool busy;
 
-//Add all sensors here
-const char* driverList[] = {TestSensor::description,
-                            DHT11Sensor::description,
-                            BMP180Sensor::description,
-                            BMP280Sensor::description,
-                            FreeMemSensor::description,
-                            AnalogInSensor::description,
-                            
-                            };
+// Add all sensors here
+const char* driverList[] = {
+    TestSensor::description,
+    DHT11Sensor::description,
+    BMP180Sensor::description,
+    BMP280Sensor::description,
+    FreeMemSensor::description,
+    AnalogInSensor::description,
+
+};
 
 char errorBuff[400];
 
@@ -58,8 +59,6 @@ CSensor* DataLab::getSensor(JsonObject& sensorConf) {
     return new AnalogInSensor(sensorConf);
   }
 
-
-
   return new TestSensor(sensorConf);
   // Add here your custom sensor
 }
@@ -78,8 +77,8 @@ DataLab::DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManage
     // serializeJson(doc, *response);
     // doc.clear();
     serializeJson(sensorsJValues, *response);
-    //doc.clear();
-    //sensorsJValues = doc.to<JsonObject>();
+    // doc.clear();
+    // sensorsJValues = doc.to<JsonObject>();
     request->send(response);
   });
 
@@ -148,7 +147,7 @@ void DataLab::start() {
 
       Serial.printf("Attaching Sensor %s, interval: %d\n", sensor->name, sensor->interval);
       ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
-      
+
       Serial.println("Done attaching sensor");
     }
     i++;
@@ -216,9 +215,17 @@ void DataLab::processPV(const char* keyname, time_t now, float val) {
 }
 
 void DataLab::loop() {
+  for (CSensor* sensor : sensorList) {
+    if (sensor == NULL) {
+      continue;
+    }
+    if (sensor->enabled) {
+      sensor->loop();
+    }
+  }
+
   while ((queue.size() > 0) && (!busy)) {
     printLocalTime();
-
     int sensorID = queue.back();
     queue.pop_back();
     // queue.pop();
@@ -231,9 +238,7 @@ void DataLab::loop() {
         StaticJsonDocument<200> sensorDoc;
         deserializeJson(sensorDoc, buffer);
         JsonObject sensorObj = sensorDoc.as<JsonObject>();
-
         serializeJsonPretty(sensorObj, Serial);
-        
         for (JsonPair kvp : sensorObj) {
           int size = sizeof(kvp.key().c_str()) + sizeof(currentSensor->name) + 1;
           char keyname[size];
@@ -244,11 +249,14 @@ void DataLab::loop() {
         }
       } else {
         Serial.print("single Value:");
-
         float val = currentSensor->getValue();
         Serial.println(val);
-        sensorsJValues[currentSensor->name] = val;
-        processPV(currentSensor->name, getNow(), val);
+        if (val != NAN){
+          sensorsJValues[currentSensor->name] = val;
+          processPV(currentSensor->name, getNow(), val);
+        }else{
+          Serial.println("return value is NAN, discard.");
+        }
       }
     } else {
       Serial.println("Disabled.");
@@ -303,11 +311,10 @@ void DataLab::readFromJsonObject(JsonObject& root)  // Unserialise json to conf
     }
   }
 
-  for (auto &&tick : ticks)
-  {    
-      tick.detach(); 
+  for (auto&& tick : ticks) {
+    tick.detach();
   }
-  
+
   for (size_t i = 0; i < (sizeof(sensorList) / sizeof(CSensor*)); i++) {
     if (sensorList[i] != NULL) {
       Serial.println("Deleting sensor");
@@ -380,7 +387,6 @@ void DataLab::writeToJsonObject(JsonObject& root) {  // Serialize conf to JSON
   Serial.println("Done serializing conf:");
   serializeJsonPretty(root, Serial);
   return;
-
 }
 void DataLab::applyDefaultConfig() {  // should load default file.
   DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
