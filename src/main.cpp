@@ -1,7 +1,7 @@
 #include <DataLab.h>
 #include <ESP8266React.h>
 #include <FS.h>
-
+#define CONFIG_ASYNC_TCP_USE_WDT 0
 #define SERIAL_BAUD_RATE 115200
 
 AsyncWebServer server(80);
@@ -19,6 +19,7 @@ void setup() {
 #elif defined(ESP8266)
   SPIFFS.begin();
 #endif
+
 
   // start the framework and data project
   esp8266React.begin();
