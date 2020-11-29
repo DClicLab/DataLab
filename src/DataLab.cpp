@@ -4,7 +4,7 @@
 #include <TimeLib.h>
 #include <Wire.h>
 #include "BMP280.cpp"
-#include "BMPSensor.cpp"
+#include "BMPsensor.cpp"
 #include "DHT11Sensor.cpp"
 
 #include "FreeMemSensor.cpp"
@@ -94,6 +94,25 @@ DataLab::DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManage
     }
     request->send(200, "text/plain", ret);
   });
+
+
+
+  AsyncCallbackJsonWebHandler* handler =
+      new AsyncCallbackJsonWebHandler("/settime", [](AsyncWebServerRequest* request, JsonVariant& json) {
+        StaticJsonDocument<200> data;
+        data = json.as<JsonObject>();
+        int day, month, year, h, m, s;
+        Serial.printf("Got: %s\n", data["time"].as<const char*>());
+        serializeJsonPretty(data, Serial);
+        if (6 == sscanf(data["time"].as<const char*>(), "%d-%d-%d %d:%d:%d", &day, &month, &year, &h, &m, &s)) {
+          setTime(h,m,s,day,month,year);
+          Serial.printf("Got:%d-%d-%d %d:%d:%d", day, month, year, h, m, s);
+          request->send(200, "text/plain", "time set");
+        } else
+          request->send(500, "application/json", "error in timeset");
+      });
+  server->addHandler(handler);
+
 
   server->on("/getjson", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.println("This can take some time...");

@@ -1,8 +1,6 @@
 # DataLab
 
-[![Build Status](https://travis-ci.org/rjwats/esp8266-react.svg?branch=master)](https://travis-ci.org/rjwats/esp8266-react)
-
-Based on [ESP8266-react](https://travis-ci.org/rjwats/esp8266-react)
+Based on [ESP8266-react](https://github.com/rjwats/esp8266-react)
 
 DataLab is a simple and extensible solution for data logging based on ESP32. It comes with an easy to use interface: just plug your sensors to your board, configure the web interface and voila your data is being logged locally and on any MQTT or HTTP online service. 
 
@@ -10,13 +8,13 @@ DataLab is a simple and extensible solution for data logging based on ESP32. It 
 
 ## Features
 
-Provides many of the features required for IoT projects:
+Provides many of the features required for IoT/sensor data projects:
 * Real time graph of sensor data
 * Support for BMP180, DHT11 (more to come)
 * Push json sensor values to HTTP or MQTT server
 * Easy to extend sensor framework
 
-And from [ESP8266-react](https://travis-ci.org/rjwats/esp8266-react):
+And from [ESP8266-react](https://github.com/rjwats/esp8266-react):
 * Configurable WiFi - Network scanner and WiFi configuration screen
 * Configurable Access Point - Can be continuous or automatically enabled when WiFi connection fails
 * Network Time - Synchronization with NTP
@@ -53,7 +51,7 @@ You can also get the code in platformio and compile for your board.
 Currently only ESP32 is supported as some code takes advantage of its multicores.
 The code will be updated to also support esp8266.
 
-Information on the interface, rest connectors and general structure can be found in the excellent [ESP8266-react](https://travis-ci.org/rjwats/esp8266-react) upon which is based DataLab.
+Information on the interface, rest connectors and general structure can be found in the excellent [ESP8266-react](https://github.com/rjwats/esp8266-react) upon which is based DataLab.
 
 ### Supporting your own sensor
 

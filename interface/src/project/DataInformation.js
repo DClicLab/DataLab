@@ -8,6 +8,8 @@ import TableCell from '@material-ui/core/TableCell';
 import TableBody from '@material-ui/core/TableBody';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import { withSnackbar } from 'notistack';
+
 
 import SectionContent from '../components/SectionContent';
 
@@ -81,9 +83,6 @@ function getData(dataList){
 }
 
 
-
-
-
 class DataInformation extends Component {
   constructor(props) {
     super(props);
@@ -96,14 +95,33 @@ class DataInformation extends Component {
 
   componentDidMount() {
 //    this.props.loadData();
+  const { enqueueSnackbar } = this.props;
     window.setInterval(() => {
       this.setState({
         dataList: getData(this.state.dataList)
       })
     }, 2000)
+    var d = new Date();
+    fetch("/settime", {
+      method: 'POST',
+      body: JSON.stringify({ 'time':d.getDate()  + "-" + (d.getMonth()+1) + "-" + d.getFullYear() + " " + d.getHours() + ":" + d.getMinutes()  }),
+      headers: new Headers({
+        'Content-Type': 'application/json'
+      })
+      
+    }).then( ()=> {enqueueSnackbar("Time updated successfully.", { variant: 'success' });})
+    .catch(error => {
+      const errorMessage = error.message || "Unknown error";
+      enqueueSnackbar("Problem setting time: " + errorMessage, {
+        variant: 'error',
+      })});
   }
+  
   render() {
-    const { classes } = this.props;
+    const { classes,enqueueSnackbar } = this.props;
+
+
+
     return (
       <SectionContent title="DataLab v2" titleGutter>
         <Typography variant="body1" paragraph>
@@ -224,4 +242,4 @@ class SensorChart2 extends React.Component {
   
 }
 
-export default withStyles(styles)(DataInformation);
+export default withSnackbar(withStyles(styles)(DataInformation));
