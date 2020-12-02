@@ -81,13 +81,14 @@ void MQTTService::loop() {
   // Serial.printf("Now is %lu\n",now());
 
   if (!client.connected()) {
+    time_t now;
+    time(&now);
+    if ((firstErr==0)||(firstErr-now>100000))
+      firstErr=now;
 
-    if ((firstErr==0)||(firstErr-now()>100000))
-      firstErr=now();
-
-    if (now()>firstErr + waitTime +random(0,10) ){
+    if (now>firstErr + waitTime +random(0,10) ){
       Serial.println("[MQTTService] re-try connection");
-       Serial.printf("[MQTTService] First :%lu, Wait:%lu now: %lu\n",firstErr,waitTime,now());
+       Serial.printf("[MQTTService] First :%lu, Wait:%lu now: %lu\n",firstErr,waitTime,now);
 
       if (reconnect()) {//reconnected! \o/
         firstErr=0;

@@ -1,7 +1,8 @@
 #include "DataLab.h"
-#include <NtpClientLib.h>
+// #include <NtpClientLib.h>
 #include <Ticker.h>
-#include <TimeLib.h>
+// #include <TimeLib.h>
+#include <time.h>
 #include <Wire.h>
 #include "BMP280.cpp"
 #include "BMPsensor.cpp"
@@ -105,7 +106,18 @@ DataLab::DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManage
         Serial.printf("Got: %s\n", data["time"].as<const char*>());
         serializeJsonPretty(data, Serial);
         if (6 == sscanf(data["time"].as<const char*>(), "%d-%d-%d %d:%d:%d", &day, &month, &year, &h, &m, &s)) {
-          setTime(h,m,s,day,month,year);
+          
+          struct tm tm;
+          tm.tm_year = year - 1900;
+          tm.tm_mon = month;
+          tm.tm_mday = day;
+          tm.tm_hour = h;
+          tm.tm_min = m;
+          tm.tm_sec = s;
+          time_t t = mktime(&tm);
+          printf("Setting time: %s", asctime(&tm));
+          struct timeval now = { .tv_sec = t };
+          settimeofday(&now,NULL);
           Serial.printf("Got:%d-%d-%d %d:%d:%d", day, month, year, h, m, s);
           request->send(200, "text/plain", "time set");
         } else
@@ -199,11 +211,15 @@ DataLab::~DataLab() {
 }
 
 time_t DataLab::getNow() {
-  if (year(now()) > 2035) {
+  time_t now;
+  struct tm timeinfo;
+  time(&now);
+  localtime_r(&now, &timeinfo);
+  if (timeinfo.tm_year < (2016 - 1900)) {
     Serial.println("NTP Error - not returning date >2035. Returning 0 aka 1970.");
     return 0;
   }
-  return now();
+  return now;
 }
 
 void printLocalTime() {
@@ -212,13 +228,7 @@ void printLocalTime() {
     Serial.println("Failed to obtain time");
     return;
   }
-
-  Serial.print(now());
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  time_t tnow;
-  time(&tnow);
-  setTime(tnow);
-  Serial.println(now());
 }
 void DataLab::processPV(const char* keyname, time_t now, float val) {
   if (cloudService != NULL && cloudService->_enabled) {

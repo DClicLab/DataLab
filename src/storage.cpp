@@ -103,7 +103,9 @@ void Storage::freeSpaceIfNeeded() {
 void Storage::rotateTS() {
   Serial.printf("DEBUG - rotating ts");
   char buffer[25];
-  currentTS = now();
+  time_t now;
+  time(&now);
+  currentTS = now;
   sprintf(buffer, "/data/0/%lu", currentTS);
   File file = SPIFFS.open(buffer, "w");
   file.close();
