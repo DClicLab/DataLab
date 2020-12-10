@@ -1,7 +1,6 @@
 #include <DataLab.h>
 #include <ESP8266React.h>
 #include <FS.h>
-#define CONFIG_ASYNC_TCP_USE_WDT 0
 #define SERIAL_BAUD_RATE 115200
 
 AsyncWebServer server(80);

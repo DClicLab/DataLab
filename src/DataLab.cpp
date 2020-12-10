@@ -128,6 +128,7 @@ DataLab::DataLab(AsyncWebServer* server, FS* fs, SecurityManager* securityManage
 
   server->on("/getjson", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.println("This can take some time...");
+
     busy = true;
     int id = 0;
     time_t ts = storage.currentTS;
@@ -244,6 +245,8 @@ void DataLab::processPV(const char* keyname, time_t now, float val) {
 }
 
 void DataLab::loop() {
+  if (busy)
+    return;
   for (CSensor* sensor : sensorList) {
     if (sensor == NULL) {
       continue;

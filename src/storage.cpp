@@ -3,6 +3,30 @@
 #define ARDUINOJSON_ENABLE_STD_STRING 1
 #include "storage.h"
 
+/*
+      Storage handling in DataLab
+
+  Each sensor value polled at a specific moment is stored in a binary format encoded with a type datapoint:
+    struct __attribute__((__packed__)) datapoint // 7 bytes only, every bit counts! :)
+    {
+        //id 5 bit
+        unsigned int id : 5;//the id of the sensor
+
+        // tsdiff 17 bits
+        unsigned int tsdiff : TSDIFFSIZE; // number of second since the starting of the file where the data is logged
+        float val; // value of the data returned by the sensor
+    };
+  This allows to store all this information in 7 bytes, which is much less than what we would have with a text based value.
+  
+  Data is stored in files that rotates every 2**TSDIFFSIZE. The filename is the timestamp of creation (start)
+
+  All data files are stored in /data/0/
+
+  The mapping between id and sensor name is stored in /data/index
+
+*/
+
+
 void Storage::loadIndex() {
   // Serial.println("In loadIndex");
   SPIFFS.begin();
@@ -39,7 +63,6 @@ void Storage::begin() {
 
 Storage::Storage() {
 }
-std::list<time_t> fileList;
 // get first file after ts after
 void Storage::updateFileList() {
   // Serial.printf("GETFIRST =entering with %lu\n", after);
@@ -49,13 +72,14 @@ void Storage::updateFileList() {
   while (file) {
     time_t cts = atoi(strrchr(file.name(), '/') + 1);
     fileList.push_back(cts);
+    Serial.printf("Found file with TS: %d\n",cts);
     file = root.openNextFile();
   }
 }
 
 time_t Storage::updateCurrentTS() {
   time_t buffer = 0;
-  int numfiles = 0;
+  // int numfiles = 0;
   Serial.println("listing files");
   updateFileList();
 
@@ -63,7 +87,7 @@ time_t Storage::updateCurrentTS() {
     if (cts > buffer) {
       buffer = cts;
     }
-    numfiles++;
+    // numfiles++;
   }
   // Serial.printf("%d Files, last ts is: %lu\n", numfiles, buffer);
   currentTS = buffer;
@@ -77,12 +101,14 @@ time_t Storage::updateCurrentTS() {
 // get first file after ts after
 time_t Storage::getFirstTS(time_t after = 0L) {
   time_t buffer = currentTS;
+
   for (time_t cts : fileList) {
     if ((cts < buffer) && (cts > after)) {
       buffer = cts;
     }
   }
 
+  Serial.printf("First TS after %lu: %lu\n",after,buffer);
   return buffer;
 }
 
@@ -157,9 +183,9 @@ uint Storage::getNameForID(int id, char* buffer) {
 }
 
 uint lastpos = 0;
-long id_s = 0;       // save val between stream calls
-long tsstart_s = 0;  // save val between stream calls
-long tsfile_s = 0;   // save val between stream calls
+int id_s = 0;       // save val between stream calls
+time_t tsstart_s = 0;  // save val between stream calls
+time_t tsfile_s = 0;   // save val between stream calls
 
 uint reqfiles = 0;
 uint totalbytes = 0;
@@ -167,14 +193,8 @@ bool last;
 // Read all values of a specific sensor id and format is as CSV
 // run through all files and output the sensor's values.
 long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t maxLen, size_t index) {
-  Serial.printf(" DEBUG - In readAsJsonStream id is %d, tsstart is %lu, index is %d heap free is %d ; maxlen %d \n",
-                id,
-                tsstart,
-                index,
-                ESP.getFreeHeap(),
-                maxLen);
-  Serial.printf("DEBUG - lastpos %lu\n", lastpos);
   time_t tsfile = 0;
+
   if (index == 0) {  // new request
     id_s = id;
     tsstart_s = tsstart;
@@ -191,9 +211,17 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
     tsstart = tsstart_s;
     tsfile = tsfile_s;
   }
+  // Serial.printf(" DEBUG - In readAsJsonStream id is %d, tsstart is %lu, index is %d heap free is %d ; maxlen %d \n",
+  //               id,
+  //               tsstart,
+  //               index,
+  //               ESP.getFreeHeap(),
+  //               maxLen);
+  // Serial.printf("DEBUG - lastpos %lu\n", lastpos);
 
-  if (maxLen > 1400)
-    maxLen = 1400;
+  maxLen = maxLen*.95; // Limit to 80% of available buffer. Using it all lead to heap corruption. 
+  // if (maxLen >= 1000)
+  //   maxLen = 1000; // Limit to 80% of available buffer. Using it all lead to heap corruption. 
 
   if (maxLen < 40) {
     return sprintf((char*)buffer, "!%d\n", maxLen);
@@ -204,7 +232,7 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
 
   char filename[22];
 
-  Serial.printf("GETJSON - loading tsfile: %lu for start %lu\n", tsfile, tsstart);
+  // Serial.printf("GETJSON - loading tsfile: %lu for start at %lu\n", tsfile, tsstart);
 
   sprintf(filename, "/data/0/%lu", tsfile);
   File file = SPIFFS.open(filename, "r");
@@ -214,15 +242,15 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
   getNameForID(id, pointname);
   file.seek(lastpos);
   uint fsize = file.size();
-  Serial.printf("GETJSON - file size is %lu last pos is %d\n", fsize, lastpos);
+  // Serial.printf("GETJSON - file size is %lu last pos is %u\n", fsize, lastpos);
   uint pos;
   bufferpos += sprintf((char*)buffer + bufferpos, "===File %lu\n", tsfile);
   
-  vTaskDelay(50);
+  // vTaskDelay(50);
   for (pos = file.position(); (pos < fsize) && (bufferpos < (maxLen - 40)); pos += sizeof(datapoint)) {
     lastpos = pos;
     datapoint point;
-    
+    // yield();
     // Serial.printf("GETJSON - reading point at %d\n",pos);
     // no need for local buffer file.read is as fast with or without buffer.
     file.read((byte*)&point, sizeof(point));  // read the next point.
@@ -234,17 +262,18 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
                            point.val);  // format entry csv style.
     }
   }
-  Serial.printf("GETJSON - wrote %d until %d out of %d\n", bufferpos, pos, fsize);
+  // Serial.printf("GETJSON - wrote %d until %d out of %d\n", bufferpos, pos, fsize);
 
   file.close();
   lastpos += sizeof(datapoint);
   totalbytes += bufferpos;
   // if file is finished and we're not on the last file, check if there is another one and set tsfile_s on it.
   if (lastpos >= fsize) {
+    // Serial.printf("GETJSON - %lu finished, ", tsfile);
     if (tsfile != currentTS) {
       lastpos = 0;
       tsfile_s = getFirstTS(tsfile);
-//      Serial.printf("GETJSON - %lu finished, next file available %lu\n", tsfile, tsfile_s);
+      Serial.printf("next file available %lu\n", tsfile_s);
       // if (totalbytes<(maxLen-40)){//if we have room in the buffer start processing next file before returning
       if (bufferpos == 0) {  // if we have not returned anything on this file...
 //        Serial.printf("GETJSON - We still have free buffer, let's process the next file\n");
@@ -252,11 +281,13 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
       }
     } else {  // No more files to process
       last = true;
-      Serial.printf("GETJSON - It was the last file\n");
+      Serial.printf("It was the last file\n");
+      bufferpos +=sprintf((char*)buffer + bufferpos, "== EOT! ==");
     }
   }
-  Serial.printf("GETJSON - returned  %d bytes \n", bufferpos);
-  Serial.printf("GETJSON - returned total %d bytes for %d files\n", totalbytes, reqfiles);
+  // Serial.printf("GETJSON - returned  %d bytes \n", bufferpos);
+  // Serial.printf("GETJSON - returned total %d bytes for %d files\n", totalbytes, reqfiles);
+  
   return bufferpos;
 }
 #endif  // Storagecpp

@@ -14,11 +14,11 @@ using namespace std;
 struct __attribute__((__packed__)) datapoint // 7 bytes only, every bit counts! :)
 {
     //id 5 bit
-    unsigned int id : 5;
+    unsigned int id : 5;//the id of the sensor
 
     // tsdiff 17 bits
-    unsigned int tsdiff : TSDIFFSIZE;
-    float val;
+    unsigned int tsdiff : TSDIFFSIZE; // number of second since the starting of the file where the data is logged
+    float val; // value of the data returned by the sensor
 };
 
 
@@ -37,6 +37,7 @@ private:
     void saveIndex();
     uint getNameForID(int id, char * buffer);
     void updateFileList();
+    std::list<time_t> fileList;
 
 public:
     time_t currentTS;

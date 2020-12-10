@@ -3,6 +3,7 @@
 
 #ifdef ESP32
 #include <WiFi.h>
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include <AsyncTCP.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
