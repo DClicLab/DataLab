@@ -11,6 +11,16 @@
       "enabled":"true"
     },
     {
+      "name":"Room-temp",
+      "driver":"Random",
+      "config":{
+        "min":"0",
+        "max":"30"
+      },
+      "interval":5,
+      "enabled":"true"
+    }
+    {
       "name":"PIR",
       "driver":"PIR",
       "config":{
