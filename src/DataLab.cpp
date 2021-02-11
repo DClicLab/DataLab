@@ -7,6 +7,7 @@
 #include "BMP280.cpp"
 #include "BMPsensor.cpp"
 #include "DHT11Sensor.cpp"
+#include "PIRSensor.cpp"
 
 #include "FreeMemSensor.cpp"
 #include "AnalogInSensor.cpp"
@@ -33,6 +34,7 @@ const char* driverList[] = {
     DHT11Sensor::description,
     BMP180Sensor::description,
     BMP280Sensor::description,
+    PIRSensor::description,
     FreeMemSensor::description,
     AnalogInSensor::description,
 
@@ -52,6 +54,9 @@ CSensor* DataLab::getSensor(JsonObject& sensorConf) {
   }
   if (strcmp(sensorConf["driver"], "DHT11") == 0) {
     return new DHT11Sensor(sensorConf);
+  }
+  if (strcmp(sensorConf["driver"], "PIR") == 0) {
+    return new PIRSensor(sensorConf);
   }
   if (strcmp(sensorConf["driver"], "FreeMem") == 0) {
     return new FreeMemSensor(sensorConf);
