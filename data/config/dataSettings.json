@@ -19,13 +19,12 @@
       },
       "interval":5,
       "enabled":"true"
-    }
+    },
     {
       "name":"PIR",
       "driver":"PIR",
       "config":{
-        "min":"LOW",
-        "max":"HIGH"
+        "pin":"36"
       },
       "interval":5,
       "enabled":"true"
