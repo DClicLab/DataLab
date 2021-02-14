@@ -54,17 +54,24 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
       });
 #else
   // Serve static resources from /www/
+  
+esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
   server->serveStatic("/js/", ESPFS, "/www/js/");
   server->serveStatic("/css/", ESPFS, "/www/css/");
   server->serveStatic("/fonts/", ESPFS, "/www/fonts/");
   server->serveStatic("/app/", ESPFS, "/www/app/");
   server->serveStatic("/favicon.ico", ESPFS, "/www/favicon.ico");
+  server->serveStatic("/index.html", ESPFS, "/www/index.html");
   // Serving all other get requests with "/www/index.htm"
   // OPTIONS get a straight up 200 response
   server->onNotFound([](AsyncWebServerRequest* request) {
+    Serial.printf("got request for %s/%s\n",request->host().c_str(),request->url().c_str());
+    
     if (request->method() == HTTP_GET) {
-      request->send(ESPFS, "/www/index.html");
-    } else if (request->method() == HTTP_OPTIONS) {
+      // request->send(ESPFS, "/www/index.html");
+      request->redirect("/index.html");
+    } else
+     if (request->method() == HTTP_OPTIONS) {
       request->send(200);
     } else {
       request->send(404);
@@ -82,10 +89,11 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
 
 void ESP8266React::begin() {
 #ifdef ESP32
-  ESPFS.begin(true);
+  ESPFS.begin(false, "",15);
 #elif defined(ESP8266)
   ESPFS.begin();
 #endif
+  ESPFS.mkdir("/config");
   _wifiSettingsService.begin();
   _apSettingsService.begin();
 #if FT_ENABLED(FT_NTP)

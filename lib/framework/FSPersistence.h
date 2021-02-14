@@ -25,7 +25,6 @@ class FSPersistence {
 
   void readFromFS() {
     File settingsFile = _fs->open(_filePath, "r");
-
     if (settingsFile) {
       DynamicJsonDocument jsonDocument = DynamicJsonDocument(_bufferSize);
       DeserializationError error = deserializeJson(jsonDocument, settingsFile);
@@ -56,9 +55,9 @@ class FSPersistence {
 
     // failed to open file, return false
     if (!settingsFile) {
+      Serial.println("Error in creating file");
       return false;
     }
-
     // serialize the data to the file
     serializeJson(jsonDocument, settingsFile);
     settingsFile.close();

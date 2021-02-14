@@ -1,6 +1,8 @@
 #include <ESP8266React.h>
 #include <LightMqttSettingsService.h>
 #include <LightStateService.h>
+#include <SensorSettingsService.h>
+#include <DataLab.h>
 
 #define SERIAL_BAUD_RATE 115200
 
@@ -11,8 +13,10 @@ LightMqttSettingsService lightMqttSettingsService =
 LightStateService lightStateService = LightStateService(&server,
                                                         esp8266React.getSecurityManager(),
                                                         esp8266React.getMqttClient(),
-                                                        &lightMqttSettingsService);
-
+                                                        &lightMqttSettingsService);                                                        
+                            
+SensorSettingsService sensorService = SensorSettingsService(&server,esp8266React.getFS(),esp8266React.getSecurityManager());
+DataLab datalab= DataLab(&server,&sensorService);
 void setup() {
   // start serial and filesystem
   Serial.begin(SERIAL_BAUD_RATE);
@@ -20,17 +24,33 @@ void setup() {
   // start the framework and demo project
   esp8266React.begin();
 
+
+  // File root = ESPFS.open("/www");
+    
+  // File file = root.openNextFile();
+ 
+  // while(file){
+ 
+  //     Serial.print("FILE: ");
+  //     Serial.println(file.name());
+ 
+  //     file = root.openNextFile();
+  // }
+
   // load the initial light settings
   lightStateService.begin();
 
+  sensorService.begin();
   // start the light service
   lightMqttSettingsService.begin();
 
   // start the server
+  datalab.start();
   server.begin();
 }
 
 void loop() {
   // run the framework's loop function
   esp8266React.loop();
+  datalab.loop();
 }
