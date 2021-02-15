@@ -25,6 +25,8 @@ class SensorConfig {
 
   CSensor* sensorList[5];
 
+  static StaticJsonDocument<1024> jsonState;
+
   // Add all sensors here
   static constexpr  const char*  driverList[] = {
       BMP180Sensor::description,
@@ -35,7 +37,6 @@ class SensorConfig {
       AnalogInSensor::description
   };
 
-  static void read(SensorConfig& settings, JsonObject& root);
 
   static CSensor* getSensor(JsonObject& sensorConf) {
     Serial.println("Adding sensor with conf");
@@ -66,6 +67,8 @@ class SensorConfig {
 
   // Received updated settings from file/UI and update JsonObject
   static StateUpdateResult update(JsonObject& root, SensorConfig& settings) {
+    root.remove("drivers");
+    jsonState.set(root);
     for (size_t i = 0; i < (sizeof(sensorList) / sizeof(CSensor*)); i++) {
       if (settings.sensorList[i] != NULL) {
         settings.sensorList[i]->end();
@@ -74,21 +77,44 @@ class SensorConfig {
         settings.sensorList[i] = NULL;
       }
     }
+    Serial.println("jsonstate is now:");
+    serializeJsonPretty(jsonState,Serial);
     int i = 0;
     Serial.println("Adding sensors from json conf:");
     JsonArray jsensors = root.getMember("sensors");
-    serializeJsonPretty(jsensors,Serial);
-
     if (jsensors.size() > 0) {
       for (JsonObject jsensor : jsensors) {
         settings.sensorList[i] = getSensor(jsensor);
         i++;
       }
     }
-    
+
+    Serial.println("RETURNING CHANGED");
     return StateUpdateResult::CHANGED;
 
   }
+
+
+  static void read(SensorConfig& settings, JsonObject& root){
+      Serial.println("In read with root as");
+      serializeJsonPretty(root,Serial);
+      
+      root.set(jsonState.as<JsonObject>());
+
+      JsonArray driverJList = root.createNestedArray("drivers");
+      for (const char* driver : driverList) {
+        if (driver == NULL)
+          continue;
+        StaticJsonDocument<200> doc;
+        deserializeJson(doc, driver);
+        driverJList.add(doc);
+      }
+      Serial.println("root is now:");
+      serializeJsonPretty(root,Serial);
+  }
+
+  FSPersistence<SensorConfig>* _fsPersistence;
+
 };
 
 class SensorSettingsService : public StatefulService<SensorConfig> {

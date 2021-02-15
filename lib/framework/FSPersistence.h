@@ -61,6 +61,8 @@ class FSPersistence {
     // serialize the data to the file
     serializeJson(jsonDocument, settingsFile);
     settingsFile.close();
+    Serial.println("Config file written:");
+    serializeJsonPretty(jsonDocument,Serial);
     return true;
   }
 

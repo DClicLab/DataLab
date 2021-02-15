@@ -76,6 +76,7 @@ class StatefulService {
     StateUpdateResult result = stateUpdater(_state);
     endTransaction();
     if (result == StateUpdateResult::CHANGED) {
+      Serial.println("State has changed, calling updatehandlers");
       callUpdateHandlers(originId);
     }
     return result;
@@ -91,10 +92,11 @@ class StatefulService {
   StateUpdateResult update(JsonObject& jsonObject, JsonStateUpdater<T> stateUpdater, const String& originId) {
     beginTransaction();
     StateUpdateResult result = stateUpdater(jsonObject, _state);
-    endTransaction();
     if (result == StateUpdateResult::CHANGED) {
+      Serial.println("State has changed, calling updatehandlers");
       callUpdateHandlers(originId);
     }
+    endTransaction();
     return result;
   }
 
@@ -117,8 +119,11 @@ class StatefulService {
     endTransaction();
   }
 
+
+
   void callUpdateHandlers(const String& originId) {
     for (const StateUpdateHandlerInfo_t& updateHandler : _updateHandlers) {
+      Serial.printf("calling handler from: %s\n",originId.c_str());
       updateHandler._cb(originId);
     }
   }
