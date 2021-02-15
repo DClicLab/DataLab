@@ -372,8 +372,9 @@ void DataLab::readFromJsonObject(JsonObject& root)  // Unserialise json to conf
 }
 
 void DataLab::addDriversToJsonObject(JsonObject& root) {
-  if (root.containsKey("drivers"))  // driver list is already here
-    return;
+  // if (root.containsKey("drivers"))  // driver list is already here
+  //   return;
+  root.remove("drivers");
   JsonArray driverJList = root.createNestedArray("drivers");
   for (const char* driver : driverList) {
     if (driver == NULL)
