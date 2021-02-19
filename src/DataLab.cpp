@@ -8,6 +8,7 @@
 #include "BMPsensor.cpp"
 #include "DHT11Sensor.cpp"
 #include "PIRSensor.cpp"
+#include <HM3301Sensor.cpp>
 
 #include "FreeMemSensor.cpp"
 #include "AnalogInSensor.cpp"
@@ -37,6 +38,7 @@ const char* driverList[] = {
     PIRSensor::description,
     FreeMemSensor::description,
     AnalogInSensor::description,
+    HM3301Sensor::description,
 
 };
 
@@ -57,6 +59,9 @@ CSensor* DataLab::getSensor(JsonObject& sensorConf) {
   }
   if (strcmp(sensorConf["driver"], "PIR") == 0) {
     return new PIRSensor(sensorConf);
+  }
+  if (strcmp(sensorConf["driver"], "HM3301") == 0) {
+    return new HM3301Sensor(sensorConf);
   }
   if (strcmp(sensorConf["driver"], "FreeMem") == 0) {
     return new FreeMemSensor(sensorConf);
@@ -382,6 +387,8 @@ void DataLab::addDriversToJsonObject(JsonObject& root) {
     StaticJsonDocument<200> doc;
     deserializeJson(doc, driver);
     driverJList.add(doc);
+    Serial.printf("adding sensor with description:%s\n",driver);
+    serializeJsonPretty(doc,Serial);
   }
 }
 

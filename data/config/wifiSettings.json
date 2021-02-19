@@ -1,6 +1,6 @@
 {
-  "ssid": "",
-  "password": "",
+  "ssid": "Ambroise",
+  "password": "apdpaca04",
   "hostname": "esp32-datalab",
   "static_ip_config": false
 }

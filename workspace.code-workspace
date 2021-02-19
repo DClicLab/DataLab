@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "reac",
+			"path": "..\\..\\PlatformIO\\Projects\\reac"
+		},
+		{
+			"name": "Seeed_PM2_5_sensor_HM3301",
+			"path": "..\\..\\PlatformIO\\Projects\\Seeed_PM2_5_sensor_HM3301"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			".mpyproject.json": "jsonc"
+		}
+	}
+}
