@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { ValidatorForm } from 'react-material-ui-form-validator';
 
 import { Table, TableBody, TableCell, TableHead, TableFooter, TableRow, withWidth, WithWidthProps, isWidthDown } from '@material-ui/core';
-import { Box, Button, Typography, } from '@material-ui/core';
+import { Button } from '@material-ui/core';
 
 import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
@@ -57,7 +57,7 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
   };
   uniqueSensorname = (name: string) => {
 
-    return this.props.data.sensors==undefined || !this.props.data.sensors.find(u => u.name === name);
+    return this.props.data.sensors===undefined || !this.props.data.sensors.find(u => u.name === name);
   }
 
   // noAdminConfigured = () => {
@@ -109,13 +109,11 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
   };
 
   handleSensorDriverChange = () => (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("Now state is ",this.state)
     // const csensor = { ...this.state.sensor}
     
     // csensor["driver"] = this.props.data.drivers[+event.target.value]
     // this.setState({ csensor })
     this.setState({ sensor: { ...this.state.sensor!, driver:  this.props.data.drivers[+event.target.value] } });
-    console.log("Now state is ",this.state)
   };
 
 
@@ -133,15 +131,15 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
     var m = Math.floor(d % 3600 / 60);
     var s = Math.floor(d % 3600 % 60);
 
-    var hDisplay = h > 0 ? h + (h == 1 ? " hour, " : " hours, ") : "";
-    var mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
-    var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
+    var hDisplay = h > 0 ? h + (h === 1 ? " hour, " : " hours, ") : "";
+    var mDisplay = m > 0 ? m + (m === 1 ? " minute, " : " minutes, ") : "";
+    var sDisplay = s > 0 ? s + (s === 1 ? " second" : " seconds") : "";
     return hDisplay + mDisplay + sDisplay; 
   }
 
   render() {
     const { width, data } = this.props;
-    if (data.sensors == undefined) {
+    if (data.sensors === undefined) {
       data.sensors = [];
     }
     const { sensor, creating } = this.state;

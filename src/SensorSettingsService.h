@@ -15,17 +15,18 @@
 #include "sensor/FreeMemSensor.cpp"
 #include "sensor/AnalogInSensor.cpp"
 #include "sensor/TestSensor.h"
-
 #define SENSOR_SETTINGS_FILE "/config/sensorSettings.json"
 #define SENSOR_SETTINGS_ENDPOINT_PATH "/rest/sensorsState"
 #define SENSOR_SETTINGS_SOCKET_PATH "/ws/sensorsState"
 
+extern bool SEMbusy;
+
 class SensorConfig {
  public:
 
-  CSensor* sensorList[5];
-
-  static StaticJsonDocument<1024> jsonState;
+  static CSensor* sensorList[5];
+  // static StaticJsonDocument<4096> jsonState;
+  static char jsonstring[4096];
 
   // Add all sensors here
   static constexpr  const char*  driverList[] = {
@@ -42,6 +43,7 @@ class SensorConfig {
     Serial.println("Adding sensor with conf");
   	serializeJsonPretty(sensorConf,Serial);
 
+    // Add here your custom sensors
     if (strcmp(sensorConf["driver"]["name"], "Random") == 0) {
       return new TestSensor(sensorConf);
     }
@@ -62,58 +64,12 @@ class SensorConfig {
     }
 
     return new TestSensor(sensorConf);
-    // Add here your custom sensor
   }
 
   // Received updated settings from file/UI and update JsonObject
-  static StateUpdateResult update(JsonObject& root, SensorConfig& settings) {
-    root.remove("drivers");
-    jsonState.set(root);
-    for (size_t i = 0; i < (sizeof(sensorList) / sizeof(CSensor*)); i++) {
-      if (settings.sensorList[i] != NULL) {
-        settings.sensorList[i]->end();
-        Serial.println("Deleting sensor");
-        delete (settings.sensorList[i]);
-        settings.sensorList[i] = NULL;
-      }
-    }
-    Serial.println("jsonstate is now:");
-    serializeJsonPretty(jsonState,Serial);
-    int i = 0;
-    Serial.println("Adding sensors from json conf:");
-    JsonArray jsensors = root.getMember("sensors");
-    if (jsensors.size() > 0) {
-      for (JsonObject jsensor : jsensors) {
-        settings.sensorList[i] = getSensor(jsensor);
-        i++;
-      }
-    }
+  static StateUpdateResult update(JsonObject& root, SensorConfig& settings) ;
 
-    Serial.println("RETURNING CHANGED");
-    return StateUpdateResult::CHANGED;
-
-  }
-
-
-  static void read(SensorConfig& settings, JsonObject& root){
-      Serial.println("In read with root as");
-      serializeJsonPretty(root,Serial);
-      
-      root.set(jsonState.as<JsonObject>());
-
-      JsonArray driverJList = root.createNestedArray("drivers");
-      for (const char* driver : driverList) {
-        if (driver == NULL)
-          continue;
-        StaticJsonDocument<200> doc;
-        deserializeJson(doc, driver);
-        driverJList.add(doc);
-      }
-      Serial.println("root is now:");
-      serializeJsonPretty(root,Serial);
-  }
-
-  FSPersistence<SensorConfig>* _fsPersistence;
+  static void read(SensorConfig& settings, JsonObject& root);
 
 };
 

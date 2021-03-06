@@ -1,0 +1,15 @@
+{
+    "sensors":[
+        {
+    "name": "TempRandom",
+    "driver": {
+      "name": "Random",
+      "config": {
+        "min": 0,
+        "max": 95
+      }
+    },
+    "enabled": true,
+    "interval": "3"
+  }]
+}

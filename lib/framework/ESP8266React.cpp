@@ -60,16 +60,23 @@ esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
   server->serveStatic("/css/", ESPFS, "/www/css/");
   server->serveStatic("/fonts/", ESPFS, "/www/fonts/");
   server->serveStatic("/app/", ESPFS, "/www/app/");
+  server->serveStatic("/raw/", ESPFS, "/data/d/");
   server->serveStatic("/favicon.ico", ESPFS, "/www/favicon.ico");
   server->serveStatic("/index.html", ESPFS, "/www/index.html");
   // Serving all other get requests with "/www/index.htm"
   // OPTIONS get a straight up 200 response
   server->onNotFound([](AsyncWebServerRequest* request) {
-    Serial.printf("got request for %s/%s\n",request->host().c_str(),request->url().c_str());
+    Serial.printf("got 404 request for %s/%s\n",request->host().c_str(),request->url().c_str());
     
     if (request->method() == HTTP_GET) {
+
+      if (strstr(request->host().c_str(),"connect") != NULL || 
+          strstr(request->host().c_str(),"msft") != NULL ||
+          strcmp(request->url().c_str(),"/") == 0 )   
+      {
+        request->redirect("/index.html");
+      }
       // request->send(ESPFS, "/www/index.html");
-      request->redirect("/index.html");
     } else
      if (request->method() == HTTP_OPTIONS) {
       request->send(200);
@@ -82,6 +89,7 @@ esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
 // Disable CORS if required
 #if defined(ENABLE_CORS)
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", CORS_ORIGIN);
+  // DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Accept, Content-Type, Authorization");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
 #endif
@@ -89,7 +97,7 @@ esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
 
 void ESP8266React::begin() {
 #ifdef ESP32
-  ESPFS.begin(false, "",15);
+  ESPFS.begin(false, "",35);
 #elif defined(ESP8266)
   ESPFS.begin();
 #endif

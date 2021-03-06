@@ -1,8 +1,96 @@
-import React, { Component } from 'react';
-import { Typography, Box, List, ListItem, ListItemText } from '@material-ui/core';
-import { SectionContent } from '../components';
+import React, { Component} from 'react';
+import { Typography, Grid, Card, CardContent, createStyles, WithStyles, Theme, withStyles } from '@material-ui/core';
+import { WebSocketControllerProps, SectionContent, webSocketController } from '../components';
 
-class DemoInformation extends Component {
+import { WEB_SOCKET_ROOT } from '../api';
+// import { Time } from '../ntp/types';
+
+
+export const SENSOR_VALUE_WEBSOCKET_URL = WEB_SOCKET_ROOT + "sensorValue";
+
+function compareSensorValues(a: SensorValue, b: SensorValue) {
+  if (a.name < b.name) {
+    return -1;
+  }
+  if (a.name > b.name) {
+    return 1;
+  }
+  return 0;
+}
+
+export interface SensorValue {
+  name: string,
+  val: number,
+  ts: number,
+  classStyle: string,
+  resetAnim: boolean,
+  animSet: () => void
+}
+
+export interface IState {
+  sens: SensorValue[],
+}
+
+const mystyles = (theme: Theme) => createStyles(
+  {
+    "off": {color:"red"},
+    "animation_trigger": {
+      "animation-name": `$animateElement`,
+      "animation-duration": "0.1s",
+    },
+
+    "@keyframes animateElement": {
+      "0%": { "background-color": "red" },
+      "25%": { "background-color": "yellow" },
+      "50%": { "background-color": "blue" },
+      "100%": { "background-color": "green" },
+    }
+  }
+);
+
+
+
+type DemoInformationProps = WithStyles<typeof mystyles> & WebSocketControllerProps<SensorValue>;
+
+class DemoInformation extends Component<DemoInformationProps, IState> {
+  constructor(props: DemoInformationProps) {
+    super(props);
+    this.state = {
+      sens: []
+    }
+  }
+
+  resetAnim = (() => {
+    var sensorlist :SensorValue[]=[];  
+    this.state.sens.forEach( (sensor: SensorValue) => {
+      if (sensor.resetAnim){
+        sensor.classStyle=this.props.classes.off;
+      }
+      sensorlist.push(sensor);
+    })    
+    this.setState({sens:sensorlist})
+  });
+  
+  
+  updateSensorList = (sensor: SensorValue) => {
+    const sensors = this.state.sens!.filter(u => u.name !== sensor.name);
+    sensor.classStyle = this.props.classes.animation_trigger;
+    sensor.resetAnim=true;
+    if (sensors.length === this.state.sens!.length) {
+      this.props.enqueueSnackbar("New sensor reporting: " + sensor.name, {
+        variant: 'success',
+      });
+    }
+    sensors.push(sensor);
+    this.setState({ sens: sensors });
+  }
+
+  componentDidUpdate(prevProps: DemoInformationProps) {
+    if (prevProps.data !== undefined && (prevProps.data!.val !== this.props.data?.val || prevProps.data!.name !== this.props.data!.name)) {
+      // console.log("update ",prevProps.data, this.props.data)
+      this.updateSensorList(this.props.data!)
+    }
+  }
 
   render() {
     return (
@@ -16,62 +104,45 @@ class DemoInformation extends Component {
           This serves to isolate your project code from the from the rest of the user interface which should
           simplify merges should you wish to update your project with future framework changes.
         </Typography>
-        <Typography variant="body1" paragraph>
-          The demo project interface code is stored in the 'interface/src/project' directory:
-        </Typography>        
-        <List>
-          <ListItem>
-            <ListItemText
-              primary="ProjectMenu.tsx"
-              secondary="You can add your project's screens to the side bar here."
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary="ProjectRouting.tsx"
-              secondary="The routing which controls the screens of your project."
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary="DemoProject.tsx"
-              secondary="This screen, with tabs and tab routing."
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary="DemoInformation.tsx"
-              secondary="The demo information page."
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary="LightStateRestController.tsx"
-              secondary="A form which lets the user control the LED over a REST service."
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary="LightStateWebSocketController.tsx"
-              secondary="A form which lets the user control and monitor the status of the LED over WebSockets."
-            />
-          </ListItem>
-          <ListItem>
-            <ListItemText
-              primary="LightMqttSettingsController.tsx"
-              secondary="A form which lets the user change the MQTT settings for MQTT based control of the LED."
-            />
-          </ListItem>
-        </List>
-        <Box mt={2}>
-          <Typography variant="body1">
-            See the project <a href="https://github.com/rjwats/esp8266-react/">README</a> for a full description of the demo project.
-          </Typography>
-        </Box>
+        <SectionContent title='Live sensor values' titleGutter>
+          <Grid container spacing={1}>
+            {
+              this.state.sens!.sort(compareSensorValues).map(sensor => (
+                <SensorValueForm {...sensor} key={sensor.name} animSet={this.resetAnim} />
+              ))
+            }
+          </Grid>
+        </SectionContent>
+
+
       </SectionContent>
     )
   }
 
 }
+export default withStyles(mystyles)(webSocketController(SENSOR_VALUE_WEBSOCKET_URL, 100, DemoInformation));
 
-export default DemoInformation;
+// export default DemoInformation;
+
+
+class SensorValueForm extends Component<SensorValue> {
+
+  render() {
+    const { val, name, classStyle,animSet } = this.props;
+    return (
+      <Grid item xs={12} sm={4}>
+        <Card>
+          <CardContent>
+            <Typography gutterBottom variant="h5" component="h2">
+              {name}
+            </Typography>
+            <Typography variant="body2" component="p"  >
+              Latest value:
+            </Typography>
+            <Typography variant="h5" className={classStyle} onAnimationEnd={animSet}>{val}</Typography>
+          </CardContent>
+        </Card>
+      </Grid>
+    )
+  }
+}

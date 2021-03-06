@@ -3,15 +3,12 @@
 
 // #include <AdminSettingsService.h>
 // #include "sensor/CSensor.h"
-#include "SensorSettingsService.h"
 // #include "CloudService.h"
+#include "SensorSettingsService.h"
 
 // #include "MQTTService.h"
 // #include "HTTPService.h"
 
-
-#define BLINK_LED 2
-#define MAX_DELAY 1000
 
 #define DATA_SETTINGS_FILE "/config/dataSettings.json"
 #define DATA_SETTINGS_PATH "/rest/dataSettings"
@@ -26,9 +23,7 @@
 //  - linked sensor values (array) +++
 
 
-class DummySettings {
- 
-};
+
 
 class DataLab  {
  public:
@@ -50,10 +45,13 @@ class DataLab  {
   private:
     void static getValueForSensor(int i);
     time_t getNow();
+    void static onWSEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len);
     
   protected:
     CSensor* sensorList[5];
     SensorSettingsService* sensorsSS;
+    AsyncWebSocket ws = AsyncWebSocket("/ws/sensorValue");
+
     // CloudService* cloudService;
     
   

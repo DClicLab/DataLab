@@ -5,6 +5,7 @@ import { PROJECT_PATH } from '../api';
 import { AuthenticatedRoute } from '../authentication';
 
 import DemoProject from './DemoProject';
+import FileList from './FilesController';
 
 class ProjectRouting extends Component {
 
@@ -17,6 +18,7 @@ class ProjectRouting extends Component {
           */
         }
         <AuthenticatedRoute exact path={`/${PROJECT_PATH}/demo/*`} component={DemoProject} />
+        <AuthenticatedRoute exact path={`/${PROJECT_PATH}/files/*`} component={FileList} />
         {
           /*
           * The redirect below caters for the default project route and redirecting invalid paths.

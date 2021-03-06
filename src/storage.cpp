@@ -6,8 +6,8 @@
 /*
       Storage handling in DataLab
 
-  Each sensor value polled at a specific moment is stored in a binary format encoded with a type datapoint:
-    struct __attribute__((__packed__)) datapoint // 7 bytes only, every bit counts! :)
+  Each sensor value polled at a specific moment is stored in a binary format encoded with a type Datapoint:
+    struct __attribute__((__packed__)) Datapoint // 7 bytes only, every bit counts! :)
     {
         //id 5 bit
         unsigned int id : 5;//the id of the sensor
@@ -17,11 +17,12 @@
 
         float val; // value of the data returned by the sensor
     };
-  This allows to store all this information in 7 bytes, which is much less than what we would have with a text based value.
-  
-  Data is stored in files that rotates every 2**TSDIFFSIZE. The filename is the timestamp of creation (start)
+  This allows to store all this information in 7 bytes, which is much less than what we would have with a text based
+  value.
 
-  All data files are stored in /data/0/
+  Data is stored in files that rotates every 2**TSDIFFSIZE sec. The filename is the timestamp of creation (start)
+
+  All data files are stored in /data/d/
 
   The mapping between id and sensor name is stored in /data/index
 
@@ -29,18 +30,17 @@
 
 
 void Storage::loadIndex() {
-  // Serial.println("In loadIndex");
-  SPIFFS.begin();
-  File file = SPIFFS.open("/data/index", "w");
-  StaticJsonDocument<256> doc;
-  deserializeJson(doc, file);
-  // DeserializationError error = deserializeJson(doc, file);
-  // if (error)
-  //   Serial.println(F("Failed to read file, using default configuration"));
+  Serial.println("In loadIndex");
 
+  File file = LITTLEFS.open("/data/index", "r");
+  StaticJsonDocument<1024> doc;
+  // deserializeJson(doc, file);
+  DeserializationError error = deserializeJson(doc, file);
+  if (error)
+    Serial.printf("error deserialising index file: %s\n",error.c_str());
   JsonArray arr = doc.as<JsonArray>();
   for (JsonObject id : arr) {
-    // Serial.printf("Reading index entry for %s: %d \n", id["name"].as<char*>(), id["index"].as<int>());
+    Serial.printf("Reading index entry for %s: %d \n", id["name"].as<char*>(), id["index"].as<int>());
     index.insert(std::make_pair(id["name"].as<std::string>(), id["index"].as<int>()));
   }
   file.close();
@@ -52,31 +52,78 @@ void Storage::saveIndex() {
     sprintf(buffer + strlen(buffer), "{\"name\":\"%s\",\"index\":\"%d\"},", it->first.c_str(), it->second);
   }
   buffer[strlen(buffer) - 1] = ']';  // replace last , by ]
-  File file = SPIFFS.open("/data/index", "w");
-  file.print(buffer);
+  Serial.printf("Saved index: %s\n",buffer);
+  File file = LITTLEFS.open("/data/index", "w+");
+  file.write((const uint8_t *) buffer,strlen(buffer));
+  Serial.printf("File size %d\n",file.size());
   file.close();
+
+  loadIndex();
 }
 
 void Storage::begin() {
+  LITTLEFS.mkdir("/data");
+  LITTLEFS.mkdir("/data/d");
   loadIndex();
   currentTS = updateCurrentTS();
 }
 
-Storage::Storage() {
+time_t getLastTsDiff(File f) {
+  int i=0;
+  Datapoint point;
+  point.tsdiff=0;
+  // when time is not available, the last points can be tsdiff=0 so let's see the one before
+  // but not too much as it is inside an http request.
+  while(point.tsdiff==0 && i<300 && (f.size() - (i*sizeof(Datapoint))>0)){
+    i++;
+    f.seek(f.size() - (i*sizeof(Datapoint)));
+    // Serial.printf("seeked 100 times... Pos %d / %d\n",f.size() - i*sizeof(Datapoint),f.size());
+    f.read((byte*)&point, sizeof(point));  
+  }
+
+
+  Serial.printf("GetLastTsDiff: at position -%d -- Got last point sensor index %d val %g with tsdiff: %d\n",i, point.id,point.val,point.tsdiff);
+  return point.tsdiff;
 }
+
 // get first file after ts after
 void Storage::updateFileList() {
   // Serial.printf("GETFIRST =entering with %lu\n", after);
-  File root = SPIFFS.open("/data/0","w");
+  fileList.clear();
+  File root = LITTLEFS.open("/data/d", "w");
   File file = root.openNextFile();
   // Not sure that we could take always the first file of openNextFile()
   while (file) {
-    time_t cts = atoi(strrchr(file.name(), '/') + 1);
-    fileList.push_back(cts);
-    Serial.printf("Found file with TS: %li\n",cts);
+    if (file.isDirectory())
+      continue;
+    DataFile datafile;
+    strcpy(datafile.filename, file.name());
+    datafile.tsstart = (time_t)atol(strrchr(file.name(), '/') + 1);
+    datafile.tsdiff = getLastTsDiff(file);
+    datafile.tsend = datafile.tsstart + datafile.tsdiff;
+    datafile.nval = file.size() / sizeof(struct Datapoint);
+    fileList.push_back(datafile);
     file = root.openNextFile();
   }
+  file.close();
 }
+
+void Storage::getFileList(char* buffer) {
+  updateFileList();
+  buffer[0] = '[';
+  int pos = 1;
+  for (auto&& file : fileList) {
+    pos += sprintf(buffer + pos,
+                   "{\"name\":\"%s\",\"start\":\"%lu\",\"end\":\"%lu\",\"nval\":\"%d\",\"diff\":\"%d\"},",
+                   file.filename,
+                   file.tsstart,
+                   file.tsend,
+                   file.nval,file.tsdiff);
+  }
+  buffer[pos - 1] = ']';
+  buffer[pos] = '\0';
+}
+
 
 time_t Storage::updateCurrentTS() {
   time_t buffer = 0;
@@ -84,9 +131,9 @@ time_t Storage::updateCurrentTS() {
   Serial.println("listing files");
   updateFileList();
 
-  for (time_t cts : fileList) {
-    if (cts > buffer) {
-      buffer = cts;
+  for (DataFile df : fileList) {
+    if (df.tsstart > buffer) {
+      buffer = df.tsstart;
     }
     // numfiles++;
   }
@@ -103,25 +150,27 @@ time_t Storage::updateCurrentTS() {
 time_t Storage::getFirstTS(time_t after = 0L) {
   time_t buffer = currentTS;
 
-  for (time_t cts : fileList) {
-    if ((cts < buffer) && (cts > after)) {
-      buffer = cts;
+  for (DataFile df : fileList) {
+    if ((df.tsstart < buffer) && (df.tsstart > after)) {
+      buffer = df.tsstart;
     }
   }
 
-  Serial.printf("First TS after %lu: %lu\n",after,buffer);
+  Serial.printf("First TS after %lu: %lu\n", after, buffer);
   return buffer;
 }
 
 void Storage::deleteTS(time_t ts) {
   char buffer[22];
-  sprintf(buffer, "/data/0/%lu", ts);
-  SPIFFS.remove(buffer);
+  sprintf(buffer, "/data/d/%lu", ts);
+  LITTLEFS.remove(buffer);
   updateFileList();
+
+
 }
 
 void Storage::freeSpaceIfNeeded() {
-  if ((SPIFFS.totalBytes() - SPIFFS.usedBytes()) < 40000) {
+  if ((LITTLEFS.totalBytes() - LITTLEFS.usedBytes()) < 40000) {
     deleteTS(getFirstTS());  // remove older file
   }
 }
@@ -133,21 +182,24 @@ void Storage::rotateTS() {
   time_t now;
   time(&now);
   currentTS = now;
-  sprintf(buffer, "/data/0/%lu", currentTS);
-  File file = SPIFFS.open(buffer, "w");
+  sprintf(buffer, "/data/d/%lu", currentTS);
+  File file = LITTLEFS.open(buffer, "w+");
   file.close();
   updateFileList();
 }
 
 void Storage::store(int id, time_t ts, float val) {
-  datapoint point;
+  Datapoint point;
   point.id = id;
   point.val = val;
+  char indexname[16];
+  getNameForID(id, indexname);
   if ((ts - currentTS) < 0) {
     Serial.printf("WARN - ts to store (%lu) is older than current ts (%lu), setting diff to 0", ts, currentTS);
     point.tsdiff = 0;
-  } else if ((ts - currentTS) >
-             pow(2, TSDIFFSIZE))  // the difference is too big to be stored in TSDIFFSIZE bits we need to rotate
+  } else if ((ts - currentTS) 
+            > 3600)
+            //  pow(2, TSDIFFSIZE))  // the difference is too big to be stored in TSDIFFSIZE bits we need to rotate
   {
     Serial.printf(
         "INFO - ts diff to store (%lu) is bigger than possible on current ts (%lu), rotating file.", ts, currentTS);
@@ -157,9 +209,9 @@ void Storage::store(int id, time_t ts, float val) {
     point.tsdiff = ts - currentTS;
   }
   char buffer[22];
-  sprintf(buffer, "/data/0/%lu", currentTS);
-  File file = SPIFFS.open(buffer, "a");
-  Serial.printf("store point id:%d, tsdiff:%d, val:%f\n", point.id, point.tsdiff, point.val);
+  sprintf(buffer, "/data/d/%lu", currentTS);
+  File file = LITTLEFS.open(buffer, "a");
+  Serial.printf("store point id:%d, tsdiff:%d, val:%g\n", point.id, point.tsdiff, point.val);
   file.write((byte*)&point, sizeof(point));
   file.close();
 }
@@ -180,17 +232,19 @@ uint Storage::getNameForID(int id, char* buffer) {
       return strlcpy(buffer, it->first.c_str(), 64);
   }
   Serial.printf("ERROR - couldn't find name for index id %d", id);
+  strcpy(buffer,"Unknown");
   return 0;
 }
 
 uint lastpos = 0;
-int id_s = 0;       // save val between stream calls
+int id_s = 0;          // save val between stream calls
 time_t tsstart_s = 0;  // save val between stream calls
 time_t tsfile_s = 0;   // save val between stream calls
 
 uint reqfiles = 0;
 uint totalbytes = 0;
 bool last;
+
 // Read all values of a specific sensor id and format is as CSV
 // run through all files and output the sensor's values.
 long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t maxLen, size_t index) {
@@ -204,7 +258,7 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
     reqfiles = 0;
     totalbytes = 0;
   } else {  // new chunk
-    if (last){
+    if (last) {
       last = 0;
       return 0;
     }
@@ -220,8 +274,7 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
   //               maxLen);
   // Serial.printf("DEBUG - lastpos %lu\n", lastpos);
 
-  maxLen = maxLen*.95; // Limit to 80% of available buffer. Using it all lead to heap corruption. 
-
+  maxLen = maxLen * .95;  // Limit to 80% of available buffer. Using it all lead to heap corruption.
 
   if (maxLen < 40) {
     return sprintf((char*)buffer, "!%d\n", maxLen);
@@ -234,29 +287,29 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
 
   // Serial.printf("GETJSON - loading tsfile: %lu for start at %lu\n", tsfile, tsstart);
 
-  sprintf(filename, "/data/0/%lu", tsfile);
-  File file = SPIFFS.open(filename, "r");
+  sprintf(filename, "/data/d/%lu", tsfile);
+  File file = LITTLEFS.open(filename, "r");
 
   uint bufferpos = 0;
   char pointname[64];
-  getNameForID(id, pointname);
   file.seek(lastpos);
   uint fsize = file.size();
   // Serial.printf("GETJSON - file size is %lu last pos is %u\n", fsize, lastpos);
   uint pos;
   bufferpos += sprintf((char*)buffer + bufferpos, "===File %lu\n", tsfile);
-  
+
   // vTaskDelay(50);
-  for (pos = file.position(); (pos < fsize) && (bufferpos < (maxLen - 40)); pos += sizeof(datapoint)) {
+  for (pos = file.position(); (pos < fsize) && (bufferpos < (maxLen - 40)); pos += sizeof(Datapoint)) {
     lastpos = pos;
-    datapoint point;
+    Datapoint point;
     // yield();
     // Serial.printf("GETJSON - reading point at %d\n",pos);
     // no need for local buffer file.read is as fast with or without buffer.
     file.read((byte*)&point, sizeof(point));  // read the next point.
-    if ((point.id == id) && (point.tsdiff + tsfile > tsstart)) {
+    getNameForID(point.id, pointname);
+    if ((id==-1 || point.id == id) && (point.tsdiff + tsfile > tsstart)) {
       bufferpos += sprintf((char*)buffer + bufferpos,
-                           "%s,%li,%f\n",
+                           "%s,%li,%g\n",
                            pointname,
                            point.tsdiff + tsfile,
                            point.val);  // format entry csv style.
@@ -265,7 +318,7 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
   // Serial.printf("GETJSON - wrote %d until %d out of %d\n", bufferpos, pos, fsize);
 
   file.close();
-  lastpos += sizeof(datapoint);//this should be +=pos
+  lastpos += sizeof(Datapoint);  // this should be +=pos
   totalbytes += bufferpos;
   // if file is finished and we're not on the last file, check if there is another one and set tsfile_s on it.
   if (lastpos >= fsize) {
@@ -276,18 +329,43 @@ long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t m
       Serial.printf("next file available %lu\n", tsfile_s);
       // if (totalbytes<(maxLen-40)){//if we have room in the buffer start processing next file before returning
       if (bufferpos == 0) {  // if we have not returned anything on this file...
-//        Serial.printf("GETJSON - We still have free buffer, let's process the next file\n");
+        //        Serial.printf("GETJSON - We still have free buffer, let's process the next file\n");
         bufferpos += readAsJsonStream(id, tsstart, buffer, maxLen - totalbytes, bufferpos);
       }
     } else {  // No more files to process
       last = true;
       Serial.printf("It was the last file\n");
-      bufferpos +=sprintf((char*)buffer + bufferpos, "== EOT! ==");
+      bufferpos += sprintf((char*)buffer + bufferpos, "== EOT! ==");
     }
   }
   // Serial.printf("GETJSON - returned  %d bytes \n", bufferpos);
   // Serial.printf("GETJSON - returned total %d bytes for %d files\n", totalbytes, reqfiles);
-  
+
   return bufferpos;
 }
+
+// StorageService::StorageService(AsyncWebServer* server, SecurityManager* securityManager, AsyncMqttClient* mqttClient)
+// :
+//     _httpGetEndpoint(Storage::read,
+//                   this,
+//                   server,
+//                   STORAGE_ENDPOINT_PATH,
+//                   securityManager,
+//                   AuthenticationPredicates::IS_AUTHENTICATED),
+
+//     _mqttClient(mqttClient) {
+
+// }
+
+// void Storage::read(Storage& storage, JsonObject& root){
+//   JsonArray jfl = root.createNestedArray("filelist");
+
+//   for (DataFile df : storage.fileList) {
+//     JsonObject jf = jfl.createNestedObject();
+//     jf["name"] = df.filename;
+//     jf["tsstart"] = df.tsstart;
+//     jf["tsend"] = df.tsend;
+//   }
+// }
+
 #endif  // Storagecpp

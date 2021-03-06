@@ -20,35 +20,44 @@ vector<int> queue;  // Sensors needed to be pulled
 
 Storage storage;
 
-const size_t CAPACITY = 2 * JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(1) + 8 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) +
-                        3 * JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(6) + 1000;
-StaticJsonDocument<CAPACITY> doc;
-JsonObject sensorsJValues = doc.to<JsonObject>();
-
-bool busy;
+// const size_t CAPACITY = 2 * JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(1) + 8 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3)
+// +
+//                         3 * JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(6) + 1000;
+// StaticJsonDocument<CAPACITY> doc;
+// JsonObject sensorsJValues = doc.to<JsonObject>();
 
 char errorBuff[400];
+extern bool SEMbusy;
 
-JsonObject getSensorJValues() {
-  return sensorsJValues;
+// JsonObject getSensorJValues() {
+// return sensorsJValues;
+// }
+
+void DataLab::onWSEvent(AsyncWebSocket* server,
+                        AsyncWebSocketClient* client,
+                        AwsEventType type,
+                        void* arg,
+                        uint8_t* data,
+                        size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    client->printf("{\"type\":\"id\",\"id\":\"datalab\"}");
+  }
 }
 
-
-
-DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings)  {
+DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) {
   Serial.println("Starting Data");
-  sensorsSS = sensorSettings; 
+  sensorsSS = sensorSettings;
   memset(sensorList, 0, sizeof(sensorList));
   // set http value responder
-  server->on("/val", HTTP_GET, [](AsyncWebServerRequest* request) {
-    AsyncResponseStream* response = request->beginResponseStream("text/json");
-    // serializeJson(doc, *response);
-    // doc.clear();
-    serializeJson(sensorsJValues, *response);
-    // doc.clear();
-    // sensorsJValues = doc.to<JsonObject>();
-    request->send(response);
-  });
+  // server->on("/val", HTTP_GET, [](AsyncWebServerRequest* request) {
+  //   AsyncResponseStream* response = request->beginResponseStream("text/json");
+  //   // serializeJson(doc, *response);
+  //   // doc.clear();
+  //   serializeJson(sensorsJValues, *response);
+  //   // doc.clear();
+  //   // sensorsJValues = doc.to<JsonObject>();
+  //   request->send(response);
+  // });
 
   server->on("/list", HTTP_GET, [](AsyncWebServerRequest* request) {
     File root = SPIFFS.open("/");
@@ -63,8 +72,6 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
     request->send(200, "text/plain", ret);
   });
 
-
-
   AsyncCallbackJsonWebHandler* handler =
       new AsyncCallbackJsonWebHandler("/settime", [](AsyncWebServerRequest* request, JsonVariant& json) {
         StaticJsonDocument<200> data;
@@ -73,7 +80,6 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
         Serial.printf("Got: %s\n", data["time"].as<const char*>());
         serializeJsonPretty(data, Serial);
         if (6 == sscanf(data["time"].as<const char*>(), "%d-%d-%d %d:%d:%d", &day, &month, &year, &h, &m, &s)) {
-          
           struct tm tm;
           tm.tm_year = year - 1900;
           tm.tm_mon = month;
@@ -83,8 +89,8 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
           tm.tm_sec = s;
           time_t t = mktime(&tm);
           printf("Setting time: %s", asctime(&tm));
-          struct timeval now = { .tv_sec = t };
-          settimeofday(&now,NULL);
+          struct timeval now = {.tv_sec = t};
+          settimeofday(&now, NULL);
           Serial.printf("Got:%d-%d-%d %d:%d:%d", day, month, year, h, m, s);
           request->send(200, "text/plain", "time set");
         } else
@@ -92,12 +98,11 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
       });
   server->addHandler(handler);
 
-
-  server->on("/getjson", HTTP_GET, [](AsyncWebServerRequest* request) {
+  server->on("/rest/getjson", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.println("This can take some time...");
 
-    busy = true;
-    int id = 0;
+    SEMbusy = true;
+    int id = -1;
     time_t ts = storage.currentTS;
     if (request->hasParam("id"))
       id = request->getParam("id")->value().toInt();
@@ -116,7 +121,7 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
     request->onDisconnect([] {
       // free resources
       Serial.println("Request completed, back to sensor work");
-      busy = false;
+      SEMbusy = false;
     });
     request->send(response);
   });
@@ -128,13 +133,34 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
       request->send(200, "text/plain", "");
   });
 
+  server->on("/rest/files", HTTP_GET, [](AsyncWebServerRequest* request) {
+    char buffer[4096];
+    storage.getFileList(buffer);
+    request->send(200, "application/json", buffer);
+  });
+
+  server->on("/rest/indexes", HTTP_GET, [](AsyncWebServerRequest* request) {
+    AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/data/index", "application/json");
+    request->send(response);
+  });
+
+
+  server->on("/rest/files/delete", HTTP_POST, [](AsyncWebServerRequest* request) {
+    Serial.printf("Got delete request for %s\n",request->getParam("ts", true)->value().c_str());
+    int ts = request->getParam("ts", true)->value().toInt();
+    if (ts!=NAN) {
+      storage.deleteTS(ts);
+      request->send(200, "", "DELETED: " + request->getParam("ts", true)->value());
+    } else {
+      request->send(404);
+    }
+  });
+
   sensorSettings->addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
 
-
+  server->addHandler(&ws);
+  ws.onEvent(onWSEvent);
 }
-
-
-
 
 void DataLab::start() {
   memset(ticks, 0, sizeof(ticks));
@@ -142,23 +168,21 @@ void DataLab::start() {
   storage.begin();
   int i = 0;
 
-  //cleanup
-
-  for (auto&& tick : ticks) {
-    tick.detach();
-  }
-
-
   Serial.println("DEBUG - Preparing sensors timers");
+
   for (CSensor* sensor : sensorsSS->config.sensorList) {
     if (sensor == NULL) {
+      Serial.println("Sensor is null.");
+      sensorList[i] = NULL;
       continue;
     }
 
     if (sensor->enabled) {
-      Serial.printf("Sensor %s is Enabled\n",sensor->name);
+      sensorList[i] = sensor;
+      Serial.printf("Sensor %s is Enabled\n", sensor->name);
       sensor->begin();
       Serial.printf("Attaching Sensor %s, interval: %d\n", sensor->name, sensor->interval);
+      Serial.printf(" senor at %p \n", sensor);
       ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
 
       Serial.println("Done attaching sensor");
@@ -166,12 +190,19 @@ void DataLab::start() {
     i++;
   }
   Serial.println("Done Adding sensors");
+  SEMbusy = false;
+
   // do whatever is required to react to the new settings
 }
 
 void DataLab::onConfigUpdated() {
-
+  // cleanup
   Serial.println("reconfig");
+  for (auto&& tick : ticks) {
+    tick.detach();
+  }
+  queue.clear();
+
   start();
   // do whatever is required to react to the new settings
 }
@@ -209,37 +240,48 @@ void printLocalTime() {
   }
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
+
 void DataLab::processPV(const char* keyname, time_t now, float val) {
   // if (cloudService != NULL && cloudService->_enabled) {
   //   char str[strlen(keyname) + 50];
   //   // if (now>1000)//if we have correct time.
-  //   //   snprintf(str, sizeof(str), "{\"ts\":%lu,\"values\":{\"%s\":%f}}", now*1000, keyname, val );
+  //   //   snprintf(str, sizeof(str), "{\"ts\":%lu,\"values\":{\"%s\":%g}}", now*1000, keyname, val );
   //   // else
-  //   snprintf(str, sizeof(str), "{\"%s\":%f}", keyname, val);
+  //   snprintf(str, sizeof(str), "{\"%s\":%g}", keyname, val);
   //   cloudService->publishValue(str);
   // }
-  Serial.printf("Calling store on %s, %lu, %f\n", keyname, now, val);
+  Serial.printf("Calling store on %s, %lu, %g\n", keyname, now, val);
+  if (ws.getClients().length()) {
+    Serial.printf("We have %d clients\n", ws.getClients().length());
+
+    ws.printfAll(
+        "{\"type\":\"payload\",\"payload\":{\"name\":\"%s\",\"val\":\"%g\",\"ts\":\"%lu\"}}", keyname, val, now);
+  }
   storage.store(keyname, now, val);
 }
 
+int lcount = 0;
 void DataLab::loop() {
-  if (busy)
+  if (SEMbusy) {
+    // if (lcount % 100 == 0) {
+    //   Serial.println("Skipp loop");
+    // }
     return;
+  }
   for (CSensor* sensor : sensorList) {
-    if (sensor == NULL) {
-      continue;
-    }
-    if (sensor->enabled) {
+    if (sensor != NULL && sensor->enabled) {
       sensor->loop();
     }
   }
 
-  while ((queue.size() > 0) && (!busy)) {
-    printLocalTime();
+  while ((queue.size() > 0) && (!SEMbusy)) {
     int sensorID = queue.back();
+    Serial.print("Getting value");
+    Serial.printf(" for sensor %d\n", sensorID);
     queue.pop_back();
     // queue.pop();
     CSensor* currentSensor = sensorList[sensorID];
+    Serial.printf("Getting value for senor at %p", currentSensor);
     if (currentSensor->enabled) {
       Serial.printf("Getting value for %s\n", currentSensor->name);
       char buffer[256];
@@ -253,38 +295,34 @@ void DataLab::loop() {
           int size = sizeof(kvp.key().c_str()) + sizeof(currentSensor->name) + 1;
           char keyname[size];
           sprintf(keyname, "%s-%s", currentSensor->name, kvp.key().c_str());
-          Serial.printf("Got JSON val: %s:%f\n", keyname, kvp.value().as<float>());
-          sensorsJValues[keyname] = kvp.value().as<float>();
+          Serial.printf("Got JSON val: %s:%g\n", keyname, kvp.value().as<float>());
+          // sensorsJValues[keyname] = kvp.value().as<float>();
           processPV(keyname, getNow(), kvp.value().as<float>());
         }
       } else {
         Serial.print("single Value:");
         float val = currentSensor->getValue();
         Serial.println(val);
-        if (val != NAN){
-          sensorsJValues[currentSensor->name] = val;
+        if (val != NAN) {
+          // sensorsJValues[currentSensor->name] = val;
           processPV(currentSensor->name, getNow(), val);
-        }else{
+        } else {
           Serial.println("return value is NAN, discard.");
         }
       }
     } else {
       Serial.println("Disabled.");
-      sensorsJValues.remove(sensorList[sensorID]->name);
+      // sensorsJValues.remove(sensorList[sensorID]->name);
     }
 
-    String ret;
-    serializeJson(sensorsJValues, ret);
-    Serial.printf("JSON loop: %s\n", ret.c_str());
+    // String ret;
+    // serializeJson(sensorsJValues, ret);
+    // Serial.printf("JSON loop: %s\n", ret.c_str());
   }
   // if (cloudService != NULL && cloudService->_enabled) {
   //   cloudService->loop();
   // }
 }
-
-
-
-
 
 // void DataLab::readFromJsonObject(JsonObject& root)  // Unserialise json to conf
 // {

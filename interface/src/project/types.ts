@@ -2,6 +2,16 @@ export interface LightState {
   led_on: boolean;
 }
 
+export interface DataFile {
+  name: string;
+  start: number;
+  end: number;
+  nval: number;
+  diff: number;
+}
+
+export interface FilesState extends Array<DataFile>{};
+
 export interface LightMqttSettings {
   unique_id: string;
   name: string;
