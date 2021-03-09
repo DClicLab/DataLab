@@ -10,7 +10,10 @@ export interface DataFile {
   diff: number;
 }
 
-export interface FilesState extends Array<DataFile>{};
+export interface FilesState {
+  files?: Array<DataFile>,
+  space?: {total:number,used:number}
+}
 
 export interface LightMqttSettings {
   unique_id: string;

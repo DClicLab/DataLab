@@ -10,6 +10,9 @@
 #elif defined(ESP8266)
 #include <sntp.h>
 #endif
+#ifdef ARDUINO_M5Stick_C
+#include <M5StickC.h>
+#endif
 
 #ifndef FACTORY_NTP_ENABLED
 #define FACTORY_NTP_ENABLED true

@@ -99,9 +99,11 @@ ArRequestHandlerFunction SecuritySettingsService::wrapRequest(ArRequestHandlerFu
 ArJsonRequestHandlerFunction SecuritySettingsService::wrapCallback(ArJsonRequestHandlerFunction onRequest,
                                                                    AuthenticationPredicate predicate) {
   return [this, onRequest, predicate](AsyncWebServerRequest* request, JsonVariant& json) {
+    Serial.printf("Checking auth for %s\n",request->url().c_str());
     Authentication authentication = authenticateRequest(request);
     if (!predicate(authentication)) {
       request->send(401);
+      Serial.printf("failed authentication for %s\n",request->url().c_str());
       return;
     }
     onRequest(request, json);

@@ -45,6 +45,7 @@ void APSettingsService::manageAP() {
 
 void APSettingsService::startAP() {
   Serial.println(F("Starting software access point"));
+  Serial.printf("Ssid: '%s', pass: '%s'\n",_state.ssid.c_str(), _state.password.c_str());
   WiFi.softAPConfig(_state.localIP, _state.gatewayIP, _state.subnetMask);
   WiFi.softAP(_state.ssid.c_str(), _state.password.c_str(), _state.channel, _state.ssidHidden, _state.maxClients);
   if (!_dnsServer) {

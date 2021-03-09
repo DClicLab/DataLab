@@ -1,8 +1,11 @@
-import React, { Component} from 'react';
+import React, { Component,useEffect, useState} from 'react';
 import { Typography, Grid, Card, CardContent, createStyles, WithStyles, Theme, withStyles } from '@material-ui/core';
 import { WebSocketControllerProps, SectionContent, webSocketController } from '../components';
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Brush, Tooltip} from 'recharts'
 
-import { WEB_SOCKET_ROOT } from '../api';
+import { ENDPOINT_ROOT, WEB_SOCKET_ROOT } from '../api';
+import { toInteger } from 'lodash';
+import { redirectingAuthorizedFetch } from '../authentication';
 // import { Time } from '../ntp/types';
 
 
@@ -27,36 +30,40 @@ export interface SensorValue {
   animSet: () => void
 }
 
-export interface IState {
-  sens: SensorValue[],
-}
 
 const mystyles = (theme: Theme) => createStyles(
   {
-    "off": {color:"red"},
+    "off": {color:"dark-grey"},
     "animation_trigger": {
       "animation-name": `$animateElement`,
       "animation-duration": "0.1s",
     },
-
+    
     "@keyframes animateElement": {
       "0%": { "background-color": "red" },
-      "25%": { "background-color": "yellow" },
-      "50%": { "background-color": "blue" },
-      "100%": { "background-color": "green" },
+      "100%": { "background-color": "white" },
     }
   }
-);
-
-
-
-type DemoInformationProps = WithStyles<typeof mystyles> & WebSocketControllerProps<SensorValue>;
-
+  );
+  
+  
+  
+  type DemoInformationProps = WithStyles<typeof mystyles> & WebSocketControllerProps<SensorValue>;
+  
+  interface GraphProps{
+    sensorName:string,
+    graphData: any[]
+  }
+  interface IState {
+    sens: SensorValue[],
+    graphData: any[]
+  }
 class DemoInformation extends Component<DemoInformationProps, IState> {
   constructor(props: DemoInformationProps) {
     super(props);
     this.state = {
-      sens: []
+      sens: [],
+      graphData:[]
     }
   }
 
@@ -71,7 +78,6 @@ class DemoInformation extends Component<DemoInformationProps, IState> {
     this.setState({sens:sensorlist})
   });
   
-  
   updateSensorList = (sensor: SensorValue) => {
     const sensors = this.state.sens!.filter(u => u.name !== sensor.name);
     sensor.classStyle = this.props.classes.animation_trigger;
@@ -82,9 +88,34 @@ class DemoInformation extends Component<DemoInformationProps, IState> {
       });
     }
     sensors.push(sensor);
-    this.setState({ sens: sensors });
+    let point:any={};
+    point.ts = +(new Date())
+    point[sensor.name]=sensor.val;
+
+    this.setState({ sens: sensors,graphData:[...this.state.graphData, point] });
   }
 
+  componentDidMount(){
+      var d = new Date();
+      d.setMilliseconds(0);
+      fetch(ENDPOINT_ROOT+"settime", {
+        method: 'POST',
+        body: JSON.stringify({'time':d.getDay()  + "-" + (d.getMonth()+1) + "-" + d.getFullYear() + " " + d.getHours() + ":" + d.getMinutes()+ ":" + d.getSeconds()  }),
+        // body: toInteger(new Date().getTime()/1000).toString(),
+        headers: new Headers({
+          'Content-Type': 'application/json'
+        })      
+      }).then( (response)=> {
+        if (response.status === 200) {
+          this.props.enqueueSnackbar("Time set successfully", { variant: 'success' });
+        } else {
+          throw Error("Error setting time, status code: " + response.status);
+        }
+      })
+      .catch(error => {
+        this.props.enqueueSnackbar(error.message || "Problem setting the time", { variant: 'error' });
+      });
+    }
   componentDidUpdate(prevProps: DemoInformationProps) {
     if (prevProps.data !== undefined && (prevProps.data!.val !== this.props.data?.val || prevProps.data!.name !== this.props.data!.name)) {
       // console.log("update ",prevProps.data, this.props.data)
@@ -94,21 +125,29 @@ class DemoInformation extends Component<DemoInformationProps, IState> {
 
   render() {
     return (
-      <SectionContent title='Demo Information' titleGutter>
+      <SectionContent title='DataLab - Live view' titleGutter>
         <Typography variant="body1" paragraph>
-          This simple demo project allows you to control the built-in LED.
-          It demonstrates how the esp8266-react framework may be extended for your own IoT project.
-        </Typography>
-        <Typography variant="body1" paragraph>
-          It is recommended that you keep your project interface code under the project directory.
-          This serves to isolate your project code from the from the rest of the user interface which should
-          simplify merges should you wish to update your project with future framework changes.
+          This page displays live information returned by DataLab.
+          You should see appearing your sensor and their latest data.
         </Typography>
         <SectionContent title='Live sensor values' titleGutter>
-          <Grid container spacing={1}>
+          {/* <Grid container spacing={1}> */}
+        <Grid container spacing={3}>
             {
               this.state.sens!.sort(compareSensorValues).map(sensor => (
-                <SensorValueForm {...sensor} key={sensor.name} animSet={this.resetAnim} />
+                <>
+
+                <Grid item key={sensor.name} xs={3}>
+                {/* <Card><CardContent> */}
+                <SensorValueForm {...sensor}  animSet={this.resetAnim} />
+                {/* </CardContent></Card> */}
+                </Grid>
+
+                <Grid item key={"G-"+sensor.name} xs={9}>
+                <GraphView graphData={this.state.graphData}  sensorName={sensor.name} />
+                </Grid>
+                </>
+
               ))
             }
           </Grid>
@@ -124,13 +163,30 @@ export default withStyles(mystyles)(webSocketController(SENSOR_VALUE_WEBSOCKET_U
 
 // export default DemoInformation;
 
+function GraphView(props:GraphProps){
+  var RenderTick = (tick: number) => ((new Date(tick ).toLocaleDateString("fr-FR")) + " " + (new Date(tick ).toLocaleTimeString("fr-FR")));
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+    <LineChart height={300} data={props.graphData} syncId="datalab" >
+      <XAxis dataKey="ts" tickFormatter={RenderTick} />
+      <YAxis />
+      <Tooltip labelFormatter={RenderTick} />
+      <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+      <Line type="monotone" connectNulls={true} dataKey={props.sensorName} isAnimationActive={false} />
+      {/* <Line type="monotone" dataKey="pv" stroke="#82ca9d" /> */}
+    </LineChart>
+      </ResponsiveContainer>
+
+  )
+}
+
 
 class SensorValueForm extends Component<SensorValue> {
 
   render() {
     const { val, name, classStyle,animSet } = this.props;
     return (
-      <Grid item xs={12} sm={4}>
         <Card>
           <CardContent>
             <Typography gutterBottom variant="h5" component="h2">
@@ -142,7 +198,6 @@ class SensorValueForm extends Component<SensorValue> {
             <Typography variant="h5" className={classStyle} onAnimationEnd={animSet}>{val}</Typography>
           </CardContent>
         </Card>
-      </Grid>
     )
   }
 }

@@ -48,16 +48,6 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
   Serial.println("Starting Data");
   sensorsSS = sensorSettings;
   memset(sensorList, 0, sizeof(sensorList));
-  // set http value responder
-  // server->on("/val", HTTP_GET, [](AsyncWebServerRequest* request) {
-  //   AsyncResponseStream* response = request->beginResponseStream("text/json");
-  //   // serializeJson(doc, *response);
-  //   // doc.clear();
-  //   serializeJson(sensorsJValues, *response);
-  //   // doc.clear();
-  //   // sensorsJValues = doc.to<JsonObject>();
-  //   request->send(response);
-  // });
 
   server->on("/list", HTTP_GET, [](AsyncWebServerRequest* request) {
     File root = SPIFFS.open("/");
@@ -71,32 +61,6 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
     }
     request->send(200, "text/plain", ret);
   });
-
-  AsyncCallbackJsonWebHandler* handler =
-      new AsyncCallbackJsonWebHandler("/settime", [](AsyncWebServerRequest* request, JsonVariant& json) {
-        StaticJsonDocument<200> data;
-        data = json.as<JsonObject>();
-        int day, month, year, h, m, s;
-        Serial.printf("Got: %s\n", data["time"].as<const char*>());
-        serializeJsonPretty(data, Serial);
-        if (6 == sscanf(data["time"].as<const char*>(), "%d-%d-%d %d:%d:%d", &day, &month, &year, &h, &m, &s)) {
-          struct tm tm;
-          tm.tm_year = year - 1900;
-          tm.tm_mon = month;
-          tm.tm_mday = day;
-          tm.tm_hour = h;
-          tm.tm_min = m;
-          tm.tm_sec = s;
-          time_t t = mktime(&tm);
-          printf("Setting time: %s", asctime(&tm));
-          struct timeval now = {.tv_sec = t};
-          settimeofday(&now, NULL);
-          Serial.printf("Got:%d-%d-%d %d:%d:%d", day, month, year, h, m, s);
-          request->send(200, "text/plain", "time set");
-        } else
-          request->send(500, "application/json", "error in timeset");
-      });
-  server->addHandler(handler);
 
   server->on("/rest/getjson", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.println("This can take some time...");
@@ -140,21 +104,60 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
   });
 
   server->on("/rest/indexes", HTTP_GET, [](AsyncWebServerRequest* request) {
-    AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/data/index", "application/json");
+    AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/data/index", "application/json");
     request->send(response);
   });
 
+  server->on("/rest/deleteall", HTTP_POST, [](AsyncWebServerRequest* request) {
+      request->send(200, "", "OK Deleting");
+      request->onDisconnect([] {
+        storage.deleteAll();
+      });
+  });
 
   server->on("/rest/files/delete", HTTP_POST, [](AsyncWebServerRequest* request) {
-    Serial.printf("Got delete request for %s\n",request->getParam("ts", true)->value().c_str());
+    Serial.printf("Got delete request for %s\n", request->getParam("ts", true)->value().c_str());
     int ts = request->getParam("ts", true)->value().toInt();
-    if (ts!=NAN) {
+    if (ts != NAN) {
       storage.deleteTS(ts);
       request->send(200, "", "DELETED: " + request->getParam("ts", true)->value());
     } else {
       request->send(404);
     }
   });
+
+  AsyncCallbackJsonWebHandler* handler =
+      new AsyncCallbackJsonWebHandler("/rest/settime", [](AsyncWebServerRequest* request, JsonVariant& json) {
+        String timeUtc = json["time"];
+        struct tm tm = {0};
+        char* s = strptime(timeUtc.c_str(), "%d-%m-%Y %H:%M:%S", &tm);
+        if (s != nullptr) {
+          time_t time = mktime(&tm);
+          struct timeval now = {.tv_sec = time};
+          settimeofday(&now, nullptr);
+      // tzset();
+
+#ifdef HASRTC
+          RTC_TimeTypeDef TimeStruct;
+          TimeStruct.Hours = tm.tm_hour;
+          TimeStruct.Minutes = tm.tm_min;
+          TimeStruct.Seconds = tm.tm_sec;
+          M5.Rtc.SetTime(&TimeStruct);
+          RTC_DateTypeDef DateStruct;
+          DateStruct.Month = tm.tm_mon + 1;
+          DateStruct.Date = tm.tm_mday;
+          DateStruct.Year = tm.tm_year + 1900;
+          M5.Rtc.SetData(&DateStruct);
+          char buf[80];
+          strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S %Z", &tm);
+          Serial.printf("RTC Time is set from WWW: %s\n", buf);
+#endif
+          AsyncWebServerResponse* response = request->beginResponse(200);
+          request->send(response);
+          return;
+        }
+      });
+  server->addHandler(handler);
 
   sensorSettings->addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
 
@@ -220,18 +223,6 @@ void DataLab::getValueForSensor(int i) {
 DataLab::~DataLab() {
 }
 
-time_t DataLab::getNow() {
-  time_t now;
-  struct tm timeinfo;
-  time(&now);
-  localtime_r(&now, &timeinfo);
-  if (timeinfo.tm_year < (2016 - 1900)) {
-    Serial.println("NTP Error - not returning date >2035. Returning 0 aka 1970.");
-    return 0;
-  }
-  return now;
-}
-
 void printLocalTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo, 100)) {
@@ -239,6 +230,19 @@ void printLocalTime() {
     return;
   }
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
+time_t DataLab::getNow() {
+  time_t now;
+  struct tm timeinfo;
+  time(&now);
+  localtime_r(&now, &timeinfo);
+
+  if (timeinfo.tm_year < (2016 - 1900)) {
+    printLocalTime();
+    Serial.println("NTP Error - not returning date >2035. Returning 0 aka 1970.");
+    return 0;
+  }
+  return now;
 }
 
 void DataLab::processPV(const char* keyname, time_t now, float val) {
@@ -252,8 +256,6 @@ void DataLab::processPV(const char* keyname, time_t now, float val) {
   // }
   Serial.printf("Calling store on %s, %lu, %g\n", keyname, now, val);
   if (ws.getClients().length()) {
-    Serial.printf("We have %d clients\n", ws.getClients().length());
-
     ws.printfAll(
         "{\"type\":\"payload\",\"payload\":{\"name\":\"%s\",\"val\":\"%g\",\"ts\":\"%lu\"}}", keyname, val, now);
   }
@@ -276,12 +278,9 @@ void DataLab::loop() {
 
   while ((queue.size() > 0) && (!SEMbusy)) {
     int sensorID = queue.back();
-    Serial.print("Getting value");
-    Serial.printf(" for sensor %d\n", sensorID);
     queue.pop_back();
     // queue.pop();
     CSensor* currentSensor = sensorList[sensorID];
-    Serial.printf("Getting value for senor at %p", currentSensor);
     if (currentSensor->enabled) {
       Serial.printf("Getting value for %s\n", currentSensor->name);
       char buffer[256];

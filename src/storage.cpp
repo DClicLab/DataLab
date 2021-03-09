@@ -64,6 +64,18 @@ void Storage::saveIndex() {
 void Storage::begin() {
   LITTLEFS.mkdir("/data");
   LITTLEFS.mkdir("/data/d");
+  if (LITTLEFS.exists("/data/d/delete")){
+    File root = LITTLEFS.open("/data/d");
+    File file;
+    while (file = root.openNextFile()) {
+      char buf[40];
+      strcpy(buf,file.name());
+      file.close();
+      Serial.printf("deleting %s\n",buf);
+      LITTLEFS.remove(buf);
+    }
+    root.close();
+  }
   loadIndex();
   currentTS = updateCurrentTS();
 }
@@ -110,8 +122,7 @@ void Storage::updateFileList() {
 
 void Storage::getFileList(char* buffer) {
   updateFileList();
-  buffer[0] = '[';
-  int pos = 1;
+  int pos=sprintf(buffer,"{\"space\":{\"total\":\"%d\",\"used\":\"%d\"},\"files\":[",LITTLEFS.totalBytes(),LITTLEFS.usedBytes());
   for (auto&& file : fileList) {
     pos += sprintf(buffer + pos,
                    "{\"name\":\"%s\",\"start\":\"%lu\",\"end\":\"%lu\",\"nval\":\"%d\",\"diff\":\"%d\"},",
@@ -120,8 +131,8 @@ void Storage::getFileList(char* buffer) {
                    file.tsend,
                    file.nval,file.tsdiff);
   }
-  buffer[pos - 1] = ']';
-  buffer[pos] = '\0';
+  
+  strcpy(buffer+strlen(buffer)-1,"]}\0");
 }
 
 
@@ -165,9 +176,14 @@ void Storage::deleteTS(time_t ts) {
   sprintf(buffer, "/data/d/%lu", ts);
   LITTLEFS.remove(buffer);
   updateFileList();
-
-
 }
+
+void Storage::deleteAll() {
+  LITTLEFS.open("/data/d/delete","w");//dealt with in begin()
+  ESP.restart();
+}
+
+
 
 void Storage::freeSpaceIfNeeded() {
   if ((LITTLEFS.totalBytes() - LITTLEFS.usedBytes()) < 40000) {
@@ -198,7 +214,7 @@ void Storage::store(int id, time_t ts, float val) {
     Serial.printf("WARN - ts to store (%lu) is older than current ts (%lu), setting diff to 0", ts, currentTS);
     point.tsdiff = 0;
   } else if ((ts - currentTS) 
-            > 3600)
+            > 3600*24*5)//every 5 days
             //  pow(2, TSDIFFSIZE))  // the difference is too big to be stored in TSDIFFSIZE bits we need to rotate
   {
     Serial.printf(

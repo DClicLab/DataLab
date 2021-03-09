@@ -32,7 +32,7 @@ public:
     virtual float getValue() {return NAN;};
     virtual int getValuesAsJson(char* buffer) 
         {
-            Serial.println("no json");
+            // Serial.println("no json");
             return 0;
         }
     virtual void begin() {};

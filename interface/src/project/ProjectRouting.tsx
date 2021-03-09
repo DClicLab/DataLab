@@ -5,7 +5,7 @@ import { PROJECT_PATH } from '../api';
 import { AuthenticatedRoute } from '../authentication';
 
 import DemoProject from './DemoProject';
-import FileList from './FilesController';
+import DataHistory from './Historical';
 
 class ProjectRouting extends Component {
 
@@ -18,14 +18,14 @@ class ProjectRouting extends Component {
           */
         }
         <AuthenticatedRoute exact path={`/${PROJECT_PATH}/demo/*`} component={DemoProject} />
-        <AuthenticatedRoute exact path={`/${PROJECT_PATH}/files/*`} component={FileList} />
+        <AuthenticatedRoute exact path={`/${PROJECT_PATH}/history/*`} component={DataHistory} />
         {
           /*
           * The redirect below caters for the default project route and redirecting invalid paths.
           * The "to" property must match one of the routes above for this to work correctly.
           */
         }
-        <Redirect to={`/${PROJECT_PATH}/demo/`} />
+        <Redirect to={`/${PROJECT_PATH}/demo/information`} />
       </Switch>
     )
   }

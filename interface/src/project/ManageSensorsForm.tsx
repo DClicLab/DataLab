@@ -183,13 +183,15 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
                   <TableCell component="th" scope="row">
                   <Table size="small" >
                     <TableBody>
+                      {//@ts-ignore
                       <TableRow>
 
                        {csensor.driver.config && Object.entries(csensor.driver.config as Object).map(([key ,value]) => {
-                        return <TableCell key={csensor.name + key}>{key}: {value}</TableCell>
-                      })}
+                         return <TableCell key={csensor.name + key}>{key}: {value}</TableCell>
+                        })}
 
                         </TableRow>
+                      }
                     </TableBody>
                     </Table>
                   </TableCell>

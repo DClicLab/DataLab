@@ -25,7 +25,7 @@ struct __attribute__((__packed__)) Datapoint  // 7 bytes only, every bit counts!
   // id 5 bit
   unsigned int id : 5;  // the id of the sensor
 
-  // tsdiff 17 bits
+  // tsdiff 19 bits
   unsigned int tsdiff : TSDIFFSIZE;  // number of second since the starting of the file where the data is logged
   float val;                         // value of the data returned by the sensor
 };
@@ -60,6 +60,7 @@ class Storage {
   // static AsyncWebSocket ws;
   void getFileList(char* buffer);
   void deleteTS(time_t ts);
+  void deleteAll();
 
   Storage(){
   }

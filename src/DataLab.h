@@ -9,10 +9,18 @@
 // #include "MQTTService.h"
 // #include "HTTPService.h"
 
-
 #define DATA_SETTINGS_FILE "/config/dataSettings.json"
 #define DATA_SETTINGS_PATH "/rest/dataSettings"
 
+#ifdef ARDUINO_M5Stick_C_Plus
+#include <M5StickCPlus.h>
+#define HASRTC
+#define ISM5
+#elif ARDUINO_M5Stick_C
+#define HASRTC
+#define ISM5
+#include <M5StickC.h>
+#endif
 
 //enum class CloudService { http, mqtt, adafruit, IFTTT, thingsboard};
 
@@ -21,8 +29,6 @@
 //  - Login and password (optional)
 //  - timer
 //  - linked sensor values (array) +++
-
-
 
 
 class DataLab  {

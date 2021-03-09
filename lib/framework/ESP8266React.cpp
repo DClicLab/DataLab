@@ -72,7 +72,8 @@ esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
 
       if (strstr(request->host().c_str(),"connect") != NULL || 
           strstr(request->host().c_str(),"msft") != NULL ||
-          strcmp(request->url().c_str(),"/") == 0 )   
+          strcmp(request->url().c_str(),"/") == 0   ||
+          request->hasHeader("Referer"))    
       {
         request->redirect("/index.html");
       }
