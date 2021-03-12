@@ -15,6 +15,7 @@
 #include "sensor/FreeMemSensor.cpp"
 #include "sensor/AnalogInSensor.cpp"
 #include "sensor/TestSensor.h"
+#include "sensor/vl53l0x.h"
 #define SENSOR_SETTINGS_FILE "/config/sensorSettings.json"
 #define SENSOR_SETTINGS_ENDPOINT_PATH "/rest/sensorsState"
 #define SENSOR_SETTINGS_SOCKET_PATH "/ws/sensorsState"
@@ -30,12 +31,13 @@ class SensorConfig {
 
   // Add all sensors here
   static constexpr  const char*  driverList[] = {
+      Vlx53l0x::description,
       BMP180Sensor::description,
       DHT11Sensor::description,
       TestSensor::description,
       BMP280Sensor::description,
       FreeMemSensor::description,
-      AnalogInSensor::description
+      AnalogInSensor::description,
   };
 
 
@@ -44,6 +46,9 @@ class SensorConfig {
   	serializeJsonPretty(sensorConf,Serial);
 
     // Add here your custom sensors
+    if (strcmp(sensorConf["driver"]["name"], "ToF") == 0) {
+      return new Vlx53l0x(sensorConf);
+    }
     if (strcmp(sensorConf["driver"]["name"], "Random") == 0) {
       return new TestSensor(sensorConf);
     }

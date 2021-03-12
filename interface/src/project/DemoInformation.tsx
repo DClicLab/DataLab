@@ -170,7 +170,8 @@ function GraphView(props:GraphProps){
     <ResponsiveContainer width="100%" height={300}>
     <LineChart height={300} data={props.graphData} syncId="datalab" >
       <XAxis dataKey="ts" tickFormatter={RenderTick} />
-      <YAxis />
+      {/* <YAxis domain={[Math.max.apply(Math, props.graphData.map(function(o) { return o[props.sensorName]; })),Math.max.apply(Math, props.graphData.map(function(o) { return o[props.sensorName]; }))]}/> */}
+      <YAxis domain={[0,Math.max.apply(Math, props.graphData.map(function(o) { return o[props.sensorName]; }))]}/>
       <Tooltip labelFormatter={RenderTick} />
       <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
       <Line type="monotone" connectNulls={true} dataKey={props.sensorName} isAnimationActive={false} />
