@@ -100,7 +100,7 @@ class DemoInformation extends Component<DemoInformationProps, IState> {
       d.setMilliseconds(0);
       fetch(ENDPOINT_ROOT+"settime", {
         method: 'POST',
-        body: JSON.stringify({'time':d.getDay()  + "-" + (d.getMonth()+1) + "-" + d.getFullYear() + " " + d.getHours() + ":" + d.getMinutes()+ ":" + d.getSeconds()  }),
+        body: JSON.stringify({'time':d.getDate()  + "-" + (d.getMonth()+1) + "-" + d.getFullYear() + " " + d.getHours() + ":" + d.getMinutes()+ ":" + d.getSeconds()  }),
         // body: toInteger(new Date().getTime()/1000).toString(),
         headers: new Headers({
           'Content-Type': 'application/json'
