@@ -1,6 +1,8 @@
 import React, { Component, } from 'react';
-import { withSnackbar, WithSnackbarProps } from 'notistack';
+import {  WithSnackbarProps } from 'notistack';
 import { RouteComponentProps } from 'react-router-dom'
+
+import { withAuthenticatedContext, AuthenticatedContextProps } from '../authentication';
 
 import { ENDPOINT_ROOT } from '../api';
 import { ErrorButton, restController, RestControllerProps, RestFormLoader, SectionContent, } from '../components';
@@ -9,12 +11,10 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import GetApp from '@material-ui/icons/GetApp';
 import IconButton from '@material-ui/core/IconButton';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
-import 'react-day-picker/style.css';
 import { DataFile, FilesState } from './types';
 import { format } from 'date-fns';
 import { toInteger } from 'lodash';
 import { redirectingAuthorizedFetch } from '../authentication';
-import { FormatAlignRight } from '@material-ui/icons';
 export const FILES_ENDPOINT = ENDPOINT_ROOT + "files";
 
 const mystyles = (theme: Theme) => createStyles(
@@ -34,7 +34,7 @@ interface IState {
 }
 
 
-class FileList extends Component<FileListProps & RouteComponentProps & WithStyles<typeof mystyles>, IState > {
+class FileList extends Component<FileListProps & RouteComponentProps & AuthenticatedContextProps & WithStyles<typeof mystyles>, IState > {
   
   state: IState={
     confirmDeleteAll: false,
@@ -147,19 +147,19 @@ class FileList extends Component<FileListProps & RouteComponentProps & WithStyle
                       <TableCell>{file.diff == 0 ? "Unknown" : tsToTime(Number(file.end))}</TableCell>
                       <TableCell>{file.nval}</TableCell>
                       <TableCell>{toInteger(file.nval*7/1000)}KB</TableCell>
-                      <TableCell><IconButton size="small" aria-label="Delete" onClick={() => this.deleteFile(file)}><DeleteIcon /></IconButton></TableCell>
+                      <TableCell><IconButton disabled={!this.props.authenticatedContext.me.admin} size="small" aria-label="Delete" onClick={() => this.deleteFile(file)}><DeleteIcon /></IconButton></TableCell>
                       <TableCell><a href={ENDPOINT_ROOT + "getjson"} download target="_blank"><IconButton size="small" aria-label="Download"><GetApp /></IconButton></a></TableCell>
-
                     </TableRow>
                   ))
                   }
                 </TableBody>
               </Table>
               <Box flexWrap="none" alignItems="right"  padding={1} whiteSpace="nowrap">
-
+              {this.props.authenticatedContext.me.admin?
               <ErrorButton startIcon={<DeleteSweepIcon />} variant="contained" onClick={this.onDeleteAll}>
                 Delete all
               </ErrorButton>
+              :""}
               </Box>
               </SectionContent>
               {this.renderDeleteAllDialog()}
@@ -171,7 +171,7 @@ class FileList extends Component<FileListProps & RouteComponentProps & WithStyle
   }
 }
 
-export default withStyles(mystyles)(restController(FILES_ENDPOINT, FileList));
+export default withAuthenticatedContext(withStyles(mystyles)(restController(FILES_ENDPOINT, FileList)));
 
 function tsToTime(ts: number) {
   return format(ts * 1000, "yyyy-MM-dd HH:mm");

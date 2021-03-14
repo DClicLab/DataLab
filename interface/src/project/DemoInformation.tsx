@@ -1,12 +1,10 @@
-import React, { Component,useEffect, useState} from 'react';
+import React, { Component} from 'react';
 import { Typography, Grid, Card, CardContent, createStyles, WithStyles, Theme, withStyles } from '@material-ui/core';
 import { WebSocketControllerProps, SectionContent, webSocketController } from '../components';
-import { LineChart, Line, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Brush, Tooltip} from 'recharts'
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip} from 'recharts'
 
 import { ENDPOINT_ROOT, WEB_SOCKET_ROOT } from '../api';
-import { toInteger } from 'lodash';
-import { redirectingAuthorizedFetch } from '../authentication';
-// import { Time } from '../ntp/types';
+
 
 
 export const SENSOR_VALUE_WEBSOCKET_URL = WEB_SOCKET_ROOT + "sensorValue";

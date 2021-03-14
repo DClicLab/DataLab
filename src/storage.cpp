@@ -225,8 +225,13 @@ void Storage::store(int id, time_t ts, float val) {
     point.tsdiff = ts - currentTS;
   }
   char buffer[22];
+  
   sprintf(buffer, "/data/d/%lu", currentTS);
   File file = LITTLEFS.open(buffer, "a");
+  if (!file) {
+    Serial.println("file open failed");
+    return;
+  }
   Serial.printf("store point id:%d, tsdiff:%d, val:%g\n", point.id, point.tsdiff, point.val);
   file.write((byte*)&point, sizeof(point));
   file.close();
@@ -252,113 +257,113 @@ uint Storage::getNameForID(int id, char* buffer) {
   return 0;
 }
 
-uint lastpos = 0;
-int id_s = 0;          // save val between stream calls
-time_t tsstart_s = 0;  // save val between stream calls
-time_t tsfile_s = 0;   // save val between stream calls
+// uint lastpos = 0;
+// int id_s = 0;          // save val between stream calls
+// time_t tsstart_s = 0;  // save val between stream calls
+// time_t tsfile_s = 0;   // save val between stream calls
 
-uint reqfiles = 0;
-uint totalbytes = 0;
-bool last;
+// uint reqfiles = 0;
+// uint totalbytes = 0;
+// bool last;
 
-// Read all values of a specific sensor id and format is as CSV
-// run through all files and output the sensor's values.
-long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t maxLen, size_t index) {
-  time_t tsfile = 0;
+// // Read all values of a specific sensor id and format is as CSV
+// // run through all files and output the sensor's values.
+// long Storage::readAsJsonStream(int id, time_t tsstart, uint8_t* buffer, size_t maxLen, size_t index) {
+//   time_t tsfile = 0;
 
-  if (index == 0) {  // new request
-    id_s = id;
-    tsstart_s = tsstart;
-    lastpos = 0;
-    tsfile = getFirstTS(tsstart);
-    reqfiles = 0;
-    totalbytes = 0;
-  } else {  // new chunk
-    if (last) {
-      last = 0;
-      return 0;
-    }
-    id = id_s;
-    tsstart = tsstart_s;
-    tsfile = tsfile_s;
-  }
-  // Serial.printf(" DEBUG - In readAsJsonStream id is %d, tsstart is %lu, index is %d heap free is %d ; maxlen %d \n",
-  //               id,
-  //               tsstart,
-  //               index,
-  //               ESP.getFreeHeap(),
-  //               maxLen);
-  // Serial.printf("DEBUG - lastpos %lu\n", lastpos);
+//   if (index == 0) {  // new request
+//     id_s = id;
+//     tsstart_s = tsstart;
+//     lastpos = 0;
+//     tsfile = getFirstTS(tsstart);
+//     reqfiles = 0;
+//     totalbytes = 0;
+//   } else {  // new chunk
+//     if (last) {
+//       last = 0;
+//       return 0;
+//     }
+//     id = id_s;
+//     tsstart = tsstart_s;
+//     tsfile = tsfile_s;
+//   }
+//   // Serial.printf(" DEBUG - In readAsJsonStream id is %d, tsstart is %lu, index is %d heap free is %d ; maxlen %d \n",
+//   //               id,
+//   //               tsstart,
+//   //               index,
+//   //               ESP.getFreeHeap(),
+//   //               maxLen);
+//   // Serial.printf("DEBUG - lastpos %lu\n", lastpos);
 
-  maxLen = maxLen * .95;  // Limit to 80% of available buffer. Using it all lead to heap corruption.
+//   maxLen = maxLen * .95;  // Limit to 80% of available buffer. Using it all lead to heap corruption.
 
-  if (maxLen < 40) {
-    return sprintf((char*)buffer, "!%d\n", maxLen);
-  }
+//   if (maxLen < 40) {
+//     return sprintf((char*)buffer, "!%d\n", maxLen);
+//   }
 
-  if (lastpos == 0)
-    reqfiles++;
+//   if (lastpos == 0)
+//     reqfiles++;
 
-  char filename[22];
+//   char filename[22];
 
-  // Serial.printf("GETJSON - loading tsfile: %lu for start at %lu\n", tsfile, tsstart);
+//   // Serial.printf("GETJSON - loading tsfile: %lu for start at %lu\n", tsfile, tsstart);
 
-  sprintf(filename, "/data/d/%lu", tsfile);
-  File file = LITTLEFS.open(filename, "r");
+//   sprintf(filename, "/data/d/%lu", tsfile);
+//   File file = LITTLEFS.open(filename, "r");
 
-  uint bufferpos = 0;
-  char pointname[64];
-  file.seek(lastpos);
-  uint fsize = file.size();
-  // Serial.printf("GETJSON - file size is %lu last pos is %u\n", fsize, lastpos);
-  uint pos;
-  bufferpos += sprintf((char*)buffer + bufferpos, "===File %lu\n", tsfile);
+//   uint bufferpos = 0;
+//   char pointname[64];
+//   file.seek(lastpos);
+//   uint fsize = file.size();
+//   // Serial.printf("GETJSON - file size is %lu last pos is %u\n", fsize, lastpos);
+//   uint pos;
+//   bufferpos += sprintf((char*)buffer + bufferpos, "===File %lu\n", tsfile);
 
-  // vTaskDelay(50);
-  for (pos = file.position(); (pos < fsize) && (bufferpos < (maxLen - 40)); pos += sizeof(Datapoint)) {
-    lastpos = pos;
-    Datapoint point;
-    // yield();
-    // Serial.printf("GETJSON - reading point at %d\n",pos);
-    // no need for local buffer file.read is as fast with or without buffer.
-    file.read((byte*)&point, sizeof(point));  // read the next point.
-    getNameForID(point.id, pointname);
-    if ((id==-1 || point.id == id) && (point.tsdiff + tsfile > tsstart)) {
-      bufferpos += sprintf((char*)buffer + bufferpos,
-                           "%s,%li,%g\n",
-                           pointname,
-                           point.tsdiff + tsfile,
-                           point.val);  // format entry csv style.
-    }
-  }
-  // Serial.printf("GETJSON - wrote %d until %d out of %d\n", bufferpos, pos, fsize);
+//   // vTaskDelay(50);
+//   for (pos = file.position(); (pos < fsize) && (bufferpos < (maxLen - 40)); pos += sizeof(Datapoint)) {
+//     lastpos = pos;
+//     Datapoint point;
+//     // yield();
+//     // Serial.printf("GETJSON - reading point at %d\n",pos);
+//     // no need for local buffer file.read is as fast with or without buffer.
+//     file.read((byte*)&point, sizeof(point));  // read the next point.
+//     getNameForID(point.id, pointname);
+//     if ((id==-1 || point.id == id) && (point.tsdiff + tsfile > tsstart)) {
+//       bufferpos += sprintf((char*)buffer + bufferpos,
+//                            "%s,%li,%g\n",
+//                            pointname,
+//                            point.tsdiff + tsfile,
+//                            point.val);  // format entry csv style.
+//     }
+//   }
+//   // Serial.printf("GETJSON - wrote %d until %d out of %d\n", bufferpos, pos, fsize);
 
-  file.close();
-  lastpos += sizeof(Datapoint);  // this should be +=pos
-  totalbytes += bufferpos;
-  // if file is finished and we're not on the last file, check if there is another one and set tsfile_s on it.
-  if (lastpos >= fsize) {
-    // Serial.printf("GETJSON - %lu finished, ", tsfile);
-    if (tsfile != currentTS) {
-      lastpos = 0;
-      tsfile_s = getFirstTS(tsfile);
-      Serial.printf("next file available %lu\n", tsfile_s);
-      // if (totalbytes<(maxLen-40)){//if we have room in the buffer start processing next file before returning
-      if (bufferpos == 0) {  // if we have not returned anything on this file...
-        //        Serial.printf("GETJSON - We still have free buffer, let's process the next file\n");
-        bufferpos += readAsJsonStream(id, tsstart, buffer, maxLen - totalbytes, bufferpos);
-      }
-    } else {  // No more files to process
-      last = true;
-      Serial.printf("It was the last file\n");
-      bufferpos += sprintf((char*)buffer + bufferpos, "== EOT! ==");
-    }
-  }
-  // Serial.printf("GETJSON - returned  %d bytes \n", bufferpos);
-  // Serial.printf("GETJSON - returned total %d bytes for %d files\n", totalbytes, reqfiles);
+//   file.close();
+//   lastpos += sizeof(Datapoint);  // this should be +=pos
+//   totalbytes += bufferpos;
+//   // if file is finished and we're not on the last file, check if there is another one and set tsfile_s on it.
+//   if (lastpos >= fsize) {
+//     // Serial.printf("GETJSON - %lu finished, ", tsfile);
+//     if (tsfile != currentTS) {
+//       lastpos = 0;
+//       tsfile_s = getFirstTS(tsfile);
+//       Serial.printf("next file available %lu\n", tsfile_s);
+//       // if (totalbytes<(maxLen-40)){//if we have room in the buffer start processing next file before returning
+//       if (bufferpos == 0) {  // if we have not returned anything on this file...
+//         //        Serial.printf("GETJSON - We still have free buffer, let's process the next file\n");
+//         bufferpos += readAsJsonStream(id, tsstart, buffer, maxLen - totalbytes, bufferpos);
+//       }
+//     } else {  // No more files to process
+//       last = true;
+//       Serial.printf("It was the last file\n");
+//       bufferpos += sprintf((char*)buffer + bufferpos, "== EOT! ==");
+//     }
+//   }
+//   // Serial.printf("GETJSON - returned  %d bytes \n", bufferpos);
+//   // Serial.printf("GETJSON - returned total %d bytes for %d files\n", totalbytes, reqfiles);
 
-  return bufferpos;
-}
+//   return bufferpos;
+// }
 
 // StorageService::StorageService(AsyncWebServer* server, SecurityManager* securityManager, AsyncMqttClient* mqttClient)
 // :

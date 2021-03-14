@@ -135,6 +135,7 @@ class MenuAppBar extends React.Component<MenuAppBarProps, MenuAppBarState> {
             <Divider />
           </Fragment>
         )}
+        {authenticatedContext.me.admin?
         <List>
           <ListItem to='/wifi/' selected={path.startsWith('/wifi/')} button component={Link}>
             <ListItemIcon>
@@ -179,6 +180,7 @@ class MenuAppBar extends React.Component<MenuAppBarProps, MenuAppBarState> {
             <ListItemText primary="System" />
           </ListItem>
         </List>
+        :""}
       </div>
     );
 

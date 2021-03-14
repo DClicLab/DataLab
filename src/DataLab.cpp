@@ -1,37 +1,40 @@
 #include "DataLab.h"
-// #include <NtpClientLib.h>
 #include <Ticker.h>
-// #include <TimeLib.h>
 #include <time.h>
 #include <Wire.h>
-// #include "BMP280.cpp"
-// #include "BMPsensor.cpp"
-// #include "DHT11Sensor.cpp"
-
-// #include "FreeMemSensor.cpp"
-// #include "AnalogInSensor.cpp"
-// #include "TestSensor.cpp"
 #include "storage.h"
-
-// using namespace std;
 
 Ticker ticks[5];
 vector<int> queue;  // Sensors needed to be pulled
 
 Storage storage;
 
-// const size_t CAPACITY = 2 * JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(1) + 8 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3)
-// +
-//                         3 * JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(6) + 1000;
-// StaticJsonDocument<CAPACITY> doc;
-// JsonObject sensorsJValues = doc.to<JsonObject>();
-
-char errorBuff[400];
 extern bool SEMbusy;
 
-// JsonObject getSensorJValues() {
-// return sensorsJValues;
-// }
+void setBusy(AsyncWebServerRequest* request) {
+  SEMbusy = true;
+  request->onDisconnect([] { SEMbusy = false; });
+}
+
+class SemaphoreHandler : public AsyncWebHandler {
+ public:
+  SemaphoreHandler() {
+  }
+  virtual ~SemaphoreHandler() {
+  }
+
+  bool canHandle(AsyncWebServerRequest* request) {
+    if (request->url().startsWith("/raw/")) {
+      Serial.printf("A /raw request is comming!\n");
+      SEMbusy = true;
+      request->onDisconnect([] {
+        Serial.println("Request completed, back to sensor work");
+        SEMbusy = false;
+      });
+    };
+    return false;
+  }
+};
 
 void DataLab::onWSEvent(AsyncWebSocket* server,
                         AsyncWebSocketClient* client,
@@ -45,7 +48,7 @@ void DataLab::onWSEvent(AsyncWebSocket* server,
 }
 
 DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) {
-  Serial.println("Starting Data");
+  Serial.println("Starting DataLab");
   sensorsSS = sensorSettings;
   memset(sensorList, 0, sizeof(sensorList));
 
@@ -62,45 +65,12 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
     request->send(200, "text/plain", ret);
   });
 
-  server->on("/rest/getjson", HTTP_GET, [](AsyncWebServerRequest* request) {
-    Serial.println("This can take some time...");
-
-    SEMbusy = true;
-    int id = -1;
-    time_t ts = storage.currentTS;
-    if (request->hasParam("id"))
-      id = request->getParam("id")->value().toInt();
-    if (request->hasParam("ts"))
-      ts = request->getParam("ts")->value().toDouble();
-
-    AsyncWebServerResponse* response =
-        request->beginChunkedResponse("text/plain", [&id, &ts](uint8_t* buffer, size_t maxLen, size_t index) -> size_t {
-          // Write up to "maxLen" bytes into "buffer" and return the amount written.
-          // index equals the amount of bytes that have been already sent
-          // You will be asked for more data until 0 is returned
-          // Keep in mind that you can not delay or yield waiting for more data!
-
-          return storage.readAsJsonStream(id, ts, buffer, maxLen, index);
-        });
-    request->onDisconnect([] {
-      // free resources
-      Serial.println("Request completed, back to sensor work");
-      SEMbusy = false;
-    });
-    request->send(response);
-  });
-
-  server->on("/getErrors", HTTP_GET, [](AsyncWebServerRequest* request) {
-    if (strlen(errorBuff))
-      request->send(200, "text/plain", errorBuff);
-    else
-      request->send(200, "text/plain", "");
-  });
-
   server->on("/rest/files", HTTP_GET, [](AsyncWebServerRequest* request) {
+    SEMbusy = true;
     char buffer[4096];
     storage.getFileList(buffer);
     request->send(200, "application/json", buffer);
+    request->onDisconnect([] { SEMbusy = false; });
   });
 
   server->on("/rest/indexes", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -109,13 +79,12 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
   });
 
   server->on("/rest/deleteall", HTTP_POST, [](AsyncWebServerRequest* request) {
-      request->send(200, "", "OK Deleting");
-      request->onDisconnect([] {
-        storage.deleteAll();
-      });
+    request->send(200, "", "OK Deleting");
+    request->onDisconnect([] { storage.deleteAll(); });
   });
 
   server->on("/rest/files/delete", HTTP_POST, [](AsyncWebServerRequest* request) {
+    SEMbusy = true;
     Serial.printf("Got delete request for %s\n", request->getParam("ts", true)->value().c_str());
     int ts = request->getParam("ts", true)->value().toInt();
     if (ts != NAN) {
@@ -124,6 +93,7 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
     } else {
       request->send(404);
     }
+    request->onDisconnect([] { SEMbusy = false; });
   });
 
   AsyncCallbackJsonWebHandler* handler =
@@ -159,23 +129,44 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
       });
   server->addHandler(handler);
 
+  server->addHandler(new SemaphoreHandler());
+  server->serveStatic("/raw/", SPIFFS, "/data/d/");
+
   sensorSettings->addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
 
   server->addHandler(&ws);
   ws.onEvent(onWSEvent);
 }
 
+
+void setupScreen(){
+#if defined(ARDUINO_M5Stick_C) || defined(ARDUINO_M5Stick_C_Plus)
+  M5.begin();
+  M5.Axp.EnableCoulombcounter();
+  M5.Lcd.setRotation(1);
+  M5.Axp.ScreenBreath(12);
+  M5.Lcd.fillScreen(TFT_WHITE);
+  M5.Lcd.setFreeFont(&FreeSansBold12pt7b);
+  m5.Lcd.setTextDatum(MC_DATUM);
+  int xpos = M5.Lcd.width() / 2; // Half the screen width
+  int ypos = M5.Lcd.height() / 2; // Half the screen width
+  M5.Lcd.setTextColor(TFT_DARKGREY);
+  M5.Lcd.drawString("DataLab", xpos,ypos,1);
+  delay(2000);
+  M5.Lcd.fillScreen(TFT_BLACK);
+  M5.Lcd.setTextFont(1);
+  M5.Lcd.setTextColor(TFT_GREEN);
+#endif
+}
 void DataLab::start() {
+  setupScreen();
   memset(ticks, 0, sizeof(ticks));
-  Serial.println("starting conf");
   storage.begin();
   int i = 0;
-
   Serial.println("DEBUG - Preparing sensors timers");
 
   for (CSensor* sensor : sensorsSS->config.sensorList) {
     if (sensor == NULL) {
-      Serial.println("Sensor is null.");
       sensorList[i] = NULL;
       continue;
     }
@@ -262,14 +253,45 @@ void DataLab::processPV(const char* keyname, time_t now, float val) {
   storage.store(keyname, now, val);
 }
 
+
+ulong LCDTimeout =0;
 int lcount = 0;
+double lastval=0;
+int lastid=0;
+ulong lastms=0;
+
 void DataLab::loop() {
   if (SEMbusy) {
-    // if (lcount % 100 == 0) {
-    //   Serial.println("Skipp loop");
-    // }
     return;
   }
+
+#ifdef ISM5
+  if (M5.BtnA.wasPressed()){//Turn back ON screen
+    M5.Axp.ScreenBreath(12);
+    LCDTimeout = millis() + 7000;
+    M5.Lcd.fillScreen(TFT_BLACK);
+    M5.Lcd.setCursor(0,0);
+    //Status print
+    M5.Lcd.printf("DataLab - Uptime %01.0f:%02.0f:%02.2f\n", floor(millis()/3600000.0), floor((millis()/1000)%3600/60.0), (millis()/1000)%60/1.0);
+    // char buf[300];
+    // storage.getFileList(buf);
+    // StaticJsonDocument<200> doc;
+    // deserializeJson(doc,buf);
+    // M5.Lcd.printf("Current file contains:\n");
+    if (lastval){
+      M5.Lcd.printf("Last value: %s:%g\n",sensorList[lastid]->name,lastval);
+      uint time = (millis()-lastms)/1000;
+      M5.Lcd.printf("%01.0f min %02.0f sec ago\n",floor(time/60)/1.0, (time)%60/1.0);
+    }
+    
+    M5.Lcd.printf("\nBattery: V: %.3fv  I: %.3fma\n", M5.Axp.GetBatVoltage(), M5.Axp.GetBatCurrent());
+
+  }else if (LCDTimeout < millis()){//Turn screen off.
+    M5.Axp.ScreenBreath(0);
+  }
+  M5.update();
+
+#endif
   for (CSensor* sensor : sensorList) {
     if (sensor != NULL && sensor->enabled) {
       sensor->loop();
@@ -279,12 +301,13 @@ void DataLab::loop() {
   while ((queue.size() > 0) && (!SEMbusy)) {
     int sensorID = queue.back();
     queue.pop_back();
-    // queue.pop();
     CSensor* currentSensor = sensorList[sensorID];
     if (currentSensor->enabled) {
       Serial.printf("Getting value for %s\n", currentSensor->name);
       char buffer[256];
       int size = currentSensor->getValuesAsJson(buffer);
+      lastms=millis();
+      lastid=sensorID;
       if (size > 0) {
         StaticJsonDocument<200> sensorDoc;
         deserializeJson(sensorDoc, buffer);
@@ -297,6 +320,7 @@ void DataLab::loop() {
           Serial.printf("Got JSON val: %s:%g\n", keyname, kvp.value().as<float>());
           // sensorsJValues[keyname] = kvp.value().as<float>();
           processPV(keyname, getNow(), kvp.value().as<float>());
+          lastval=kvp.value().as<float>();
         }
       } else {
         Serial.print("single Value:");
@@ -305,142 +329,16 @@ void DataLab::loop() {
         if (val != NAN) {
           // sensorsJValues[currentSensor->name] = val;
           processPV(currentSensor->name, getNow(), val);
+          lastval=val;
         } else {
           Serial.println("return value is NAN, discard.");
         }
       }
     } else {
       Serial.println("Disabled.");
-      // sensorsJValues.remove(sensorList[sensorID]->name);
     }
-
-    // String ret;
-    // serializeJson(sensorsJValues, ret);
-    // Serial.printf("JSON loop: %s\n", ret.c_str());
   }
   // if (cloudService != NULL && cloudService->_enabled) {
   //   cloudService->loop();
   // }
 }
-
-// void DataLab::readFromJsonObject(JsonObject& root)  // Unserialise json to conf
-// {
-//   Serial.println("in read from json:");
-
-//   serializeJsonPretty(root, Serial);
-//   addDriversToJsonObject(root);
-
-//   saveConf(root);
-
-//   JsonObject jcloud = root.getMember("cloudService");
-//   if (!jcloud.isNull()) {
-//     Serial.println("We have a cloud service ");
-//     if (cloudService != NULL) {
-//       Serial.print("delete cloud service...");
-//       // free(cloudService); //? needed?
-//       Serial.println("done.");
-//     }
-
-//     // Serial.printf("jcloud[\"driver\"]: %s\n", jcloud["driver"].as<const char*>());
-//     // Serial.printf("jcloud[\"host\"]: %s\n", jcloud["host"].as<const char*>());
-//     // Serial.printf("jcloud[\"credentials\"]: %s\n", jcloud["credentials"].as<const char*>());
-//     // Serial.printf("jcloud[\"format\"]: %s\n", jcloud["format"].as<const char*>());
-//     // Serial.printf("jcloud[\"target\"]: %s\n", jcloud["target"].as<const char*>());
-
-//     if (strcmp(jcloud["driver"], "MQTT") == 0) {
-//       Serial.println("MQTT service");
-//       cloudService = new MQTTService(jcloud["host"].as<const char*>(),
-//                                      jcloud["credentials"].as<const char*>(),
-//                                      jcloud["format"].as<const char*>(),
-//                                      jcloud["target"].as<const char*>());
-//     } else if (strcmp(jcloud["driver"], "HTTP") == 0) {
-//       Serial.println("HTTP service");
-//       cloudService = new HTTPService(jcloud["host"].as<const char*>(),
-//                                      jcloud["credentials"].as<const char*>(),
-//                                      jcloud["format"].as<const char*>(),
-//                                      jcloud["target"].as<const char*>());
-//     }
-//   }
-
-//   for (auto&& tick : ticks) {
-//     tick.detach();
-//   }
-
-//   for (size_t i = 0; i < (sizeof(sensorList) / sizeof(CSensor*)); i++) {
-//     if (sensorList[i] != NULL) {
-//       Serial.println("Deleting sensor");
-//       delete (sensorList[i]);
-//       sensorList[i] = NULL;
-//     }
-//   }
-
-//   int i = 0;
-//   Serial.println("sensors");
-//   JsonArray jsensors = root.getMember("sensors");
-//   if (jsensors.size() > 0) {
-//     for (JsonObject jsensor : jsensors) {
-//       sensorList[i] = getSensor(jsensor);
-//       i++;
-//     }
-//   }
-// }
-
-// void DataLab::addDriversToJsonObject(JsonObject& root) {
-//   if (root.containsKey("drivers"))  // driver list is already here
-//     return;
-//   JsonArray driverJList = root.createNestedArray("drivers");
-//   for (const char* driver : driverList) {
-//     if (driver == NULL)
-//       continue;
-//     StaticJsonDocument<200> doc;
-//     deserializeJson(doc, driver);
-//     driverJList.add(doc);
-//   }
-// }
-
-// void DataLab::saveConf(JsonObject& root) {
-//   // serialize it to filesystem
-//   File configFile = _fs->open(_filePath,"w");
-
-//   // failed to open file, return false
-//   if (!configFile) {
-//     return;
-//   }
-
-//   serializeJson(root, configFile);
-//   configFile.close();
-// }
-// void DataLab::readConf(JsonObject& root) {
-//   File configFile = _fs->open(_filePath,"w");
-
-//   // use defaults if no config found
-//   if (configFile) {
-//     // Protect against bad data uploaded to file system
-//     // We never expect the config file to get very large, so cap it.
-//     size_t size = configFile.size();
-
-//     if (size <= MAX_SETTINGS_SIZE) {
-//       DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
-//       DeserializationError error = deserializeJson(jsonDocument, configFile);
-//       if (error == DeserializationError::Ok && jsonDocument.is<JsonObject>()) {
-//         root.set(jsonDocument.as<JsonObject>());
-//         // root = jsonDocument.as<JsonObject>();
-//       }
-//     }
-//     configFile.close();
-//   }
-// }
-
-// void DataLab::writeToJsonObject(JsonObject& root) {  // Serialize conf to JSON
-
-//   readConf(root);
-//   addDriversToJsonObject(root);
-//   Serial.println("Done serializing conf:");
-//   serializeJsonPretty(root, Serial);
-//   return;
-// }
-// void DataLab::applyDefaultConfig() {  // should load default file.
-//   DynamicJsonDocument jsonDocument = DynamicJsonDocument(MAX_SETTINGS_SIZE);
-//   JsonObject root = jsonDocument.to<JsonObject>();
-//   readFromJsonObject(root);
-// }

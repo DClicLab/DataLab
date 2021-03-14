@@ -31,7 +31,6 @@ public:
     static constexpr const char*  description = "{\"name\":\"DHT11\",\"config\":{\"Pin\":33}}\"";
 
     DHT11Sensor( JsonObject& sensorConf): CSensor(sensorConf){
-        serializeJsonPretty(sensorConf,Serial);
         Serial.printf("Creating DHT11 sensor on pin %d\n", sensorConf["driver"]["config"]["Pin"].as<int>());
         pin = sensorConf["driver"]["config"]["Pin"].as<int>();
     };

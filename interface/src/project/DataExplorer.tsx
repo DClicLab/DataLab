@@ -1,22 +1,18 @@
 import React, { Component, useEffect, useState } from 'react';
-import { withSnackbar, WithSnackbarProps } from 'notistack';
+import { WithSnackbarProps } from 'notistack';
 import { RouteComponentProps } from 'react-router-dom'
 
 import { ENDPOINT_ROOT } from '../api';
 import { restController, RestControllerProps, RestFormLoader, SectionContent, } from '../components';
-import { Box, Button, makeStyles, Table, TableBody, TableCell, TableHead, TableRow, Typography, WithStyles } from '@material-ui/core';
-import DeleteIcon from '@material-ui/icons/Delete';
+import { Box, Button, makeStyles, Typography, WithStyles } from '@material-ui/core';
 import TimelineIcon from '@material-ui/icons/TimelineOutlined';
 import GetApp from '@material-ui/icons/GetApp';
-import IconButton from '@material-ui/core/IconButton';
 import 'react-day-picker/style.css';
 import { DataFile, FilesState } from './types';
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Brush, Tooltip} from 'recharts'
-import { DateRange, DayPicker, SelectRangeEventHandler, DateAfter, DateBefore, DateBeforeAfter } from 'react-day-picker';
+import { DateRange, DayPicker, SelectRangeEventHandler, DateAfter, DateBefore } from 'react-day-picker';
 import { format } from 'date-fns';
-import { MenuAppBar } from '../components';
-import { merge, toInteger } from 'lodash';
-import { render } from 'react-dom';
+import { toInteger } from 'lodash';
 export const FILES_ENDPOINT = ENDPOINT_ROOT + "files";
 
 const useStyles = makeStyles((theme) => ({
@@ -124,7 +120,7 @@ function Calendar(props: ICalendarProps) {
           responses.forEach(response => {
             p1.push(response.arrayBuffer().then(buffer => {
               console.log("extractdp",response,response.url.split('/')[-1])
-              ldatapoints = ldatapoints.concat(extractDP(buffer,indexes,Number(response.url.split('/').pop())));
+              ldatapoints = ldatapoints.concat(extractDP(buffer,indexes,Number(response.url.split('/').pop()),range));
               console.log("file processed.")
             }));
           });
@@ -232,7 +228,9 @@ class DataViewForm extends Component<DataViewProps & WithStyles> {
   render() {
     if (this.props.graphData && this.props.graphIndex) {
       return (
+        
         this.props.graphIndex.map((keyindex, index) => (
+          this.props.sensorInfos.get(keyindex.name)?.index ?
           <SectionContent title={keyindex.name} titleGutter key={index}>
             <ResponsiveContainer width="95%" height={400}>
               <LineChart height={300} data={this.props.graphData} syncId="datalab" >
@@ -244,7 +242,7 @@ class DataViewForm extends Component<DataViewProps & WithStyles> {
                 <YAxis />
                 <Tooltip labelFormatter={this.RenderTick} />
                 <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-                <Line type="linear" connectNulls={true} dataKey={keyindex.name} stroke={this.colors[index]} />
+                <Line type="linear" connectNulls={true} dataKey={keyindex.name} />
                 {/* <Line type="monotone" dataKey="pv" stroke="#82ca9d" /> */}
               </LineChart>
                 </ResponsiveContainer>
@@ -261,6 +259,7 @@ class DataViewForm extends Component<DataViewProps & WithStyles> {
       Download all graph data
 </Button>
           </SectionContent>
+          : ""
         ))
       )
     }
@@ -310,12 +309,14 @@ function getMergedDP(datapoints: DataPoint[], maxValPerSensor=0):[any[] , Map<st
   return [merged,sampling];
 }
 
-function extractDP(buffer: ArrayBuffer,indexes: IIndex[], tsstart:number): DataPoint[] {
+function extractDP(buffer: ArrayBuffer,indexes: IIndex[], tsstart:number, range:DateRange): DataPoint[] {
   var ret: DataPoint[] = [];
   var i=0;
   for (let offset = 0; offset *7 < buffer.byteLength; offset ++) {
     i++
-    ret.push(ReadDataPoint(buffer.slice(7 * offset, 7 * offset + 7),indexes, tsstart));
+    var point=ReadDataPoint(buffer.slice(7 * offset, 7 * offset + 7),indexes, tsstart);
+    if (point.ts! *1000>+range.from && point.ts!*1000<+range.to!)
+      ret.push(point);
   }
   return ret;
 }

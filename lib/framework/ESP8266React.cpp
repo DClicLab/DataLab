@@ -60,7 +60,6 @@ esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
   server->serveStatic("/css/", ESPFS, "/www/css/");
   server->serveStatic("/fonts/", ESPFS, "/www/fonts/");
   server->serveStatic("/app/", ESPFS, "/www/app/");
-  server->serveStatic("/raw/", ESPFS, "/data/d/");
   server->serveStatic("/favicon.ico", ESPFS, "/www/favicon.ico");
   server->serveStatic("/index.html", ESPFS, "/www/index.html");
   // Serving all other get requests with "/www/index.htm"

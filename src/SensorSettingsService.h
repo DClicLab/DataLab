@@ -16,6 +16,9 @@
 #include "sensor/AnalogInSensor.cpp"
 #include "sensor/TestSensor.h"
 #include "sensor/vl53l0x.h"
+#include "sensor/SGP30.cpp"
+#include "sensor/HMR3301.cpp"
+
 #define SENSOR_SETTINGS_FILE "/config/sensorSettings.json"
 #define SENSOR_SETTINGS_ENDPOINT_PATH "/rest/sensorsState"
 #define SENSOR_SETTINGS_SOCKET_PATH "/ws/sensorsState"
@@ -34,10 +37,12 @@ class SensorConfig {
       Vlx53l0x::description,
       BMP180Sensor::description,
       DHT11Sensor::description,
-      TestSensor::description,
       BMP280Sensor::description,
       FreeMemSensor::description,
       AnalogInSensor::description,
+      SGP30Sensor::description,
+      HM3301Sensor::description,
+      TestSensor::description,
   };
 
 
@@ -66,6 +71,12 @@ class SensorConfig {
     }
     if (strcmp(sensorConf["driver"]["name"], "AnalogIn") == 0) {
       return new AnalogInSensor(sensorConf);
+    }
+    if (strcmp(sensorConf["driver"]["name"], "SGP30") == 0) {
+      return new SGP30Sensor(sensorConf);
+    }
+    if (strcmp(sensorConf["driver"]["name"], "HM3301") == 0) {
+      return new HM3301Sensor(sensorConf);
     }
 
     return new TestSensor(sensorConf);
