@@ -28,7 +28,6 @@
 
 */
 
-
 void Storage::loadIndex() {
   Serial.println("In loadIndex");
 
@@ -37,7 +36,7 @@ void Storage::loadIndex() {
   // deserializeJson(doc, file);
   DeserializationError error = deserializeJson(doc, file);
   if (error)
-    Serial.printf("error deserialising index file: %s\n",error.c_str());
+    Serial.printf("error deserialising index file: %s\n", error.c_str());
   JsonArray arr = doc.as<JsonArray>();
   for (JsonObject id : arr) {
     Serial.printf("Reading index entry for %s: %d \n", id["name"].as<char*>(), id["index"].as<int>());
@@ -52,10 +51,10 @@ void Storage::saveIndex() {
     sprintf(buffer + strlen(buffer), "{\"name\":\"%s\",\"index\":\"%d\"},", it->first.c_str(), it->second);
   }
   buffer[strlen(buffer) - 1] = ']';  // replace last , by ]
-  Serial.printf("Saved index: %s\n",buffer);
+  Serial.printf("Saved index: %s\n", buffer);
   File file = LITTLEFS.open("/data/index", "w+");
-  file.write((const uint8_t *) buffer,strlen(buffer));
-  Serial.printf("File size %d\n",file.size());
+  file.write((const uint8_t*)buffer, strlen(buffer));
+  Serial.printf("File size %d\n", file.size());
   file.close();
 
   loadIndex();
@@ -64,14 +63,14 @@ void Storage::saveIndex() {
 void Storage::begin() {
   LITTLEFS.mkdir("/data");
   LITTLEFS.mkdir("/data/d");
-  if (LITTLEFS.exists("/data/d/delete")){
+  if (LITTLEFS.exists("/data/d/delete")) {
     File root = LITTLEFS.open("/data/d");
     File file;
     while (file = root.openNextFile()) {
       char buf[40];
-      strcpy(buf,file.name());
+      strcpy(buf, file.name());
       file.close();
-      Serial.printf("deleting %s\n",buf);
+      Serial.printf("deleting %s\n", buf);
       LITTLEFS.remove(buf);
     }
     root.close();
@@ -81,20 +80,23 @@ void Storage::begin() {
 }
 
 time_t getLastTsDiff(File f) {
-  int i=0;
+  int i = 0;
   Datapoint point;
-  point.tsdiff=0;
+  point.tsdiff = 0;
   // when time is not available, the last points can be tsdiff=0 so let's see the one before
   // but not too much as it is inside an http request.
-  while(point.tsdiff==0 && i<300 && (f.size() - (i*sizeof(Datapoint))>0)){
+  while (point.tsdiff == 0 && i < 300 && (f.size() - (i * sizeof(Datapoint)) > 0)) {
     i++;
-    f.seek(f.size() - (i*sizeof(Datapoint)));
+    f.seek(f.size() - (i * sizeof(Datapoint)));
     // Serial.printf("seeked 100 times... Pos %d / %d\n",f.size() - i*sizeof(Datapoint),f.size());
-    f.read((byte*)&point, sizeof(point));  
+    f.read((byte*)&point, sizeof(point));
   }
 
-
-  Serial.printf("GetLastTsDiff: at position -%d -- Got last point sensor index %d val %g with tsdiff: %d\n",i, point.id,point.val,point.tsdiff);
+  Serial.printf("GetLastTsDiff: at position -%d -- Got last point sensor index %d val %g with tsdiff: %d\n",
+                i,
+                point.id,
+                point.val,
+                point.tsdiff);
   return point.tsdiff;
 }
 
@@ -122,19 +124,20 @@ void Storage::updateFileList() {
 
 void Storage::getFileList(char* buffer) {
   updateFileList();
-  int pos=sprintf(buffer,"{\"space\":{\"total\":\"%d\",\"used\":\"%d\"},\"files\":[",LITTLEFS.totalBytes(),LITTLEFS.usedBytes());
+  int pos = sprintf(
+      buffer, "{\"space\":{\"total\":\"%d\",\"used\":\"%d\"},\"files\":[", LITTLEFS.totalBytes(), LITTLEFS.usedBytes());
   for (auto&& file : fileList) {
     pos += sprintf(buffer + pos,
                    "{\"name\":\"%s\",\"start\":\"%lu\",\"end\":\"%lu\",\"nval\":\"%d\",\"diff\":\"%d\"},",
                    file.filename,
                    file.tsstart,
                    file.tsend,
-                   file.nval,file.tsdiff);
+                   file.nval,
+                   file.tsdiff);
   }
-  
-  strcpy(buffer+strlen(buffer)-1,"]}\0");
-}
 
+  strcpy(buffer + strlen(buffer) - 1, "]}\0");
+}
 
 time_t Storage::updateCurrentTS() {
   time_t buffer = 0;
@@ -179,11 +182,9 @@ void Storage::deleteTS(time_t ts) {
 }
 
 void Storage::deleteAll() {
-  LITTLEFS.open("/data/d/delete","w");//dealt with in begin()
+  LITTLEFS.open("/data/d/delete", "w");  // dealt with in begin()
   ESP.restart();
 }
-
-
 
 void Storage::freeSpaceIfNeeded() {
   if ((LITTLEFS.totalBytes() - LITTLEFS.usedBytes()) < 40000) {
@@ -212,10 +213,17 @@ void Storage::store(int id, time_t ts, float val) {
   getNameForID(id, indexname);
   if ((ts - currentTS) < 0) {
     Serial.printf("WARN - ts to store (%lu) is older than current ts (%lu), setting diff to 0", ts, currentTS);
+
+    time_t rawtime;
+    time(&rawtime);
+    struct tm ts = *localtime(&rawtime);
+    char buf[80];
+    strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S %Z", &ts);
+    Serial.printf("Local time is %s\n", buf);
+
     point.tsdiff = 0;
-  } else if ((ts - currentTS) 
-            > 3600*24*5)//every 5 days
-            //  pow(2, TSDIFFSIZE))  // the difference is too big to be stored in TSDIFFSIZE bits we need to rotate
+  } else if ((ts - currentTS) > 3600 * 24 * 5)  // every 5 days
+  //  pow(2, TSDIFFSIZE))  // the difference is too big to be stored in TSDIFFSIZE bits we need to rotate
   {
     Serial.printf(
         "INFO - ts diff to store (%lu) is bigger than possible on current ts (%lu), rotating file.", ts, currentTS);
@@ -225,7 +233,7 @@ void Storage::store(int id, time_t ts, float val) {
     point.tsdiff = ts - currentTS;
   }
   char buffer[22];
-  
+
   sprintf(buffer, "/data/d/%lu", currentTS);
   File file = LITTLEFS.open(buffer, "a");
   if (!file) {
@@ -253,7 +261,7 @@ uint Storage::getNameForID(int id, char* buffer) {
       return strlcpy(buffer, it->first.c_str(), 64);
   }
   Serial.printf("ERROR - couldn't find name for index id %d", id);
-  strcpy(buffer,"Unknown");
+  strcpy(buffer, "Unknown");
   return 0;
 }
 
@@ -287,7 +295,8 @@ uint Storage::getNameForID(int id, char* buffer) {
 //     tsstart = tsstart_s;
 //     tsfile = tsfile_s;
 //   }
-//   // Serial.printf(" DEBUG - In readAsJsonStream id is %d, tsstart is %lu, index is %d heap free is %d ; maxlen %d \n",
+//   // Serial.printf(" DEBUG - In readAsJsonStream id is %d, tsstart is %lu, index is %d heap free is %d ; maxlen %d
+//   \n",
 //   //               id,
 //   //               tsstart,
 //   //               index,

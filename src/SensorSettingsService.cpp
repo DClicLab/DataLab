@@ -13,7 +13,7 @@ SensorSettingsService::SensorSettingsService(AsyncWebServer* server, FS* fs, Sec
                   server,
                   SENSOR_SETTINGS_ENDPOINT_PATH,
                   securityManager,
-                  AuthenticationPredicates::IS_AUTHENTICATED),
+                  AuthenticationPredicates::IS_AUTHENTICATED,4096),
     _webSocket(SensorConfig::read,
                SensorConfig::update,
                this,
@@ -27,8 +27,9 @@ SensorSettingsService::SensorSettingsService(AsyncWebServer* server, FS* fs, Sec
 
 
 void  SensorConfig::read(SensorConfig& settings, JsonObject& root) {
-  Serial.printf("Json stirng is %s\n", jsonstring);
-  StaticJsonDocument<2048> doc;
+  
+  Serial.printf("root size is %d\n", root.size());
+  StaticJsonDocument<4096> doc;
   deserializeJson(doc, (const char*) jsonstring);
   root["sensors"]=doc["sensors"];
 
@@ -36,15 +37,17 @@ void  SensorConfig::read(SensorConfig& settings, JsonObject& root) {
   for (const char* driver : driverList) {
     if (driver == NULL)
       continue;
-    StaticJsonDocument<200> doc;
-    
-    deserializeJson(doc, driver);
-    driverJList.add(doc);
+    StaticJsonDocument<1024> docx;
+    deserializeJson(docx, driver);
+    serializeJsonPretty(docx,Serial);
+    driverJList.add(docx);
   }
+  Serial.printf("All added.\n");
 }
 
 // Received updated settings from file/UI and update JsonObject
 StateUpdateResult  SensorConfig::update(JsonObject& root, SensorConfig& settings) {
+  Serial.println("iN update");
   root.remove("drivers");
   SEMbusy = true;
   serializeJson(root, jsonstring);

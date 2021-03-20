@@ -27,13 +27,12 @@ extern bool SEMbusy;
 
 class SensorConfig {
  public:
-
   static CSensor* sensorList[5];
   // static StaticJsonDocument<4096> jsonState;
   static char jsonstring[4096];
 
   // Add all sensors here
-  static constexpr  const char*  driverList[] = {
+  static constexpr const char* driverList[] = {
       Vlx53l0x::description,
       BMP180Sensor::description,
       DHT11Sensor::description,
@@ -41,14 +40,13 @@ class SensorConfig {
       FreeMemSensor::description,
       AnalogInSensor::description,
       SGP30Sensor::description,
-      HM3301Sensor::description,
       TestSensor::description,
+      HM3301Sensor::description,
   };
-
 
   static CSensor* getSensor(JsonObject& sensorConf) {
     Serial.println("Adding sensor with conf");
-  	serializeJsonPretty(sensorConf,Serial);
+    serializeJsonPretty(sensorConf, Serial);
 
     // Add here your custom sensors
     if (strcmp(sensorConf["driver"]["name"], "ToF") == 0) {
@@ -57,7 +55,7 @@ class SensorConfig {
     if (strcmp(sensorConf["driver"]["name"], "Random") == 0) {
       return new TestSensor(sensorConf);
     }
-    if (strcmp(sensorConf["driver"]["name"], "BMP") == 0) {
+    if (strcmp(sensorConf["driver"]["name"], "BMP180") == 0) {
       return new BMP180Sensor(sensorConf);
     }
     if (strcmp(sensorConf["driver"]["name"], "BMP280") == 0) {
@@ -83,10 +81,9 @@ class SensorConfig {
   }
 
   // Received updated settings from file/UI and update JsonObject
-  static StateUpdateResult update(JsonObject& root, SensorConfig& settings) ;
+  static StateUpdateResult update(JsonObject& root, SensorConfig& settings);
 
   static void read(SensorConfig& settings, JsonObject& root);
-
 };
 
 class SensorSettingsService : public StatefulService<SensorConfig> {

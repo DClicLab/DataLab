@@ -1,7 +1,7 @@
 import React, { RefObject } from 'react';
 import { TextValidator, ValidatorForm, SelectValidator } from 'react-material-ui-form-validator';
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, Checkbox,MenuItem } from '@material-ui/core';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Checkbox,MenuItem, Typography } from '@material-ui/core';
 
 import { BlockFormControlLabel, FormButton } from '../components';
 
@@ -69,6 +69,7 @@ class SensorForm extends React.Component<SensorFormProps> {
           {driverlist.map((key,index:number) => (
     <MenuItem key={sensor.name + key.name} value={index}>{key.name}</MenuItem>
           ))}
+
         </SelectValidator>
           {
           
@@ -78,7 +79,7 @@ class SensorForm extends React.Component<SensorFormProps> {
           
           
           }
-
+          <Typography>Note: SDA, SDC pins available on M5Stick: 0,26,32,33</Typography>
             <TextValidator
               validators={['required', 'minNumber:1', 'maxNumber:65000'] }
               name="interval"

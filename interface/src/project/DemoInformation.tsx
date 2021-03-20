@@ -98,7 +98,7 @@ class DemoInformation extends Component<DemoInformationProps, IState> {
       d.setMilliseconds(0);
       fetch(ENDPOINT_ROOT+"settime", {
         method: 'POST',
-        body: JSON.stringify({'time':d.getDate()  + "-" + (d.getMonth()+1) + "-" + d.getFullYear() + " " + d.getHours() + ":" + d.getMinutes()+ ":" + d.getSeconds()  }),
+        body: JSON.stringify({'time':d.getUTCDate()  + "-" + (d.getUTCMonth()+1) + "-" + d.getUTCFullYear() + " " + d.getUTCHours() + ":" + d.getUTCMinutes()+ ":" + d.getUTCSeconds()  }),
         // body: toInteger(new Date().getTime()/1000).toString(),
         headers: new Headers({
           'Content-Type': 'application/json'

@@ -15,6 +15,7 @@ import { DataFile, FilesState } from './types';
 import { format } from 'date-fns';
 import { toInteger } from 'lodash';
 import { redirectingAuthorizedFetch } from '../authentication';
+import { red } from '@material-ui/core/colors';
 export const FILES_ENDPOINT = ENDPOINT_ROOT + "files";
 
 const mystyles = (theme: Theme) => createStyles(
@@ -141,26 +142,26 @@ class FileList extends Component<FileListProps & RouteComponentProps & Authentic
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {this.props.data!.files!.map(file => (
+                  {this.props.data!.files!.map((file,i) => (
                     <TableRow key={file.name}><TableCell>{file.name}</TableCell>
                       <TableCell>{tsToTime(Number(file.start))}</TableCell>
                       <TableCell>{file.diff == 0 ? "Unknown" : tsToTime(Number(file.end))}</TableCell>
                       <TableCell>{file.nval}</TableCell>
                       <TableCell>{toInteger(file.nval*7/1000)}KB</TableCell>
-                      <TableCell><IconButton disabled={!this.props.authenticatedContext.me.admin} size="small" aria-label="Delete" onClick={() => this.deleteFile(file)}><DeleteIcon /></IconButton></TableCell>
-                      <TableCell><a href={ENDPOINT_ROOT + "getjson"} download target="_blank"><IconButton size="small" aria-label="Download"><GetApp /></IconButton></a></TableCell>
+                      <TableCell><IconButton disabled={!this.props.authenticatedContext.me.admin || i<=this.props.data!.files!.length-1} size="small" aria-label="Delete" onClick={() => this.deleteFile(file)}><DeleteIcon /></IconButton></TableCell>
+                      {/* <TableCell><a href={ENDPOINT_ROOT + "getjson"} download target="_blank"><IconButton size="small" aria-label="Download"><GetApp /></IconButton></a></TableCell> */}
                     </TableRow>
                   ))
                   }
                 </TableBody>
               </Table>
-              <Box flexWrap="none" alignItems="right"  padding={1} whiteSpace="nowrap">
               {this.props.authenticatedContext.me.admin?
+              <Box display="flex" justifyContent="flex-end" width="100" bgcolor="background.paper" padding={1} whiteSpace="nowrap">
               <ErrorButton startIcon={<DeleteSweepIcon />} variant="contained" onClick={this.onDeleteAll}>
-                Delete all
+                Delete all & reset
               </ErrorButton>
-              :""}
               </Box>
+              :""}
               </SectionContent>
               {this.renderDeleteAllDialog()}
               </>

@@ -56,9 +56,9 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
   // Serve static resources from /www/
   
 esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
-  server->serveStatic("/js/", ESPFS, "/www/js/");
-  server->serveStatic("/css/", ESPFS, "/www/css/");
-  server->serveStatic("/fonts/", ESPFS, "/www/fonts/");
+  server->serveStatic("/js/", ESPFS, "/www/js/").setCacheControl("max-age=6000");
+  server->serveStatic("/css/", ESPFS, "/www/css/").setCacheControl("max-age=6000");;
+  server->serveStatic("/fonts/", ESPFS, "/www/fonts/").setCacheControl("max-age=6000");;
   server->serveStatic("/app/", ESPFS, "/www/app/");
   server->serveStatic("/favicon.ico", ESPFS, "/www/favicon.ico");
   server->serveStatic("/index.html", ESPFS, "/www/index.html");
@@ -71,7 +71,9 @@ esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
 
       if (strstr(request->host().c_str(),"connect") != NULL || 
           strstr(request->host().c_str(),"msft") != NULL ||
+          request->host().startsWith("192.168")  ||
           strcmp(request->url().c_str(),"/") == 0   ||
+          request->url().startsWith("/project")   ||
           request->hasHeader("Referer"))    
       {
         request->redirect("/index.html");

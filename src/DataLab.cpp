@@ -102,9 +102,19 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
         struct tm tm = {0};
         char* s = strptime(timeUtc.c_str(), "%d-%m-%Y %H:%M:%S", &tm);
         if (s != nullptr) {
-          time_t time = mktime(&tm);
-          struct timeval now = {.tv_sec = time};
+          setenv("TZ", "UTC0", 1);
+          tzset();
+          time_t ltime = mktime(&tm);
+          struct timeval now = {.tv_sec = ltime};
           settimeofday(&now, nullptr);
+          Serial.printf("Got time from www: utc Time is set to %d-%d-%d %d:%d:%d\n",
+                        tm.tm_year + 1900,
+                        tm.tm_mon + 1,
+                        tm.tm_mday,
+                        tm.tm_hour,
+                        tm.tm_min,
+                        tm.tm_sec);
+
       // tzset();
 
 #ifdef HASRTC
@@ -122,6 +132,14 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
           strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S %Z", &tm);
           Serial.printf("RTC Time is set from WWW: %s\n", buf);
 #endif
+          setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+          tzset();
+          time_t rawtime;
+          time(&rawtime);
+          struct tm ts = *localtime(&rawtime);
+          strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S %Z", &ts);
+          Serial.printf("Local time is %s\n", buf);
+
           AsyncWebServerResponse* response = request->beginResponse(200);
           request->send(response);
           return;
@@ -138,8 +156,7 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
   ws.onEvent(onWSEvent);
 }
 
-
-void setupScreen(){
+void setupScreen() {
 #if defined(ARDUINO_M5Stick_C) || defined(ARDUINO_M5Stick_C_Plus)
   M5.begin();
   M5.Axp.EnableCoulombcounter();
@@ -148,14 +165,15 @@ void setupScreen(){
   M5.Lcd.fillScreen(TFT_WHITE);
   M5.Lcd.setFreeFont(&FreeSansBold12pt7b);
   m5.Lcd.setTextDatum(MC_DATUM);
-  int xpos = M5.Lcd.width() / 2; // Half the screen width
-  int ypos = M5.Lcd.height() / 2; // Half the screen width
+  int xpos = M5.Lcd.width() / 2;   // Half the screen width
+  int ypos = M5.Lcd.height() / 2;  // Half the screen width
   M5.Lcd.setTextColor(TFT_DARKGREY);
-  M5.Lcd.drawString("DataLab", xpos,ypos,1);
+  M5.Lcd.drawString("DataLab", xpos, ypos, 1);
   delay(2000);
   M5.Lcd.fillScreen(TFT_BLACK);
   M5.Lcd.setTextFont(1);
   M5.Lcd.setTextColor(TFT_GREEN);
+  M5.Axp.ScreenBreath(0);
 #endif
 }
 void DataLab::start() {
@@ -223,17 +241,17 @@ void printLocalTime() {
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 time_t DataLab::getNow() {
-  time_t now;
-  struct tm timeinfo;
-  time(&now);
-  localtime_r(&now, &timeinfo);
+  return time(nullptr);
+  // time_t now;
+  // struct tm timeinfo;
+  // timeinfo=*gmtime(&now);
 
-  if (timeinfo.tm_year < (2016 - 1900)) {
-    printLocalTime();
-    Serial.println("NTP Error - not returning date >2035. Returning 0 aka 1970.");
-    return 0;
-  }
-  return now;
+  // if (timeinfo.tm_year < (2016 - 1900)) {
+  //   // printLocalTime();
+  //   Serial.println("NTP Error - not returning date >2035. Returning 0 aka 1970.");
+  //   return 0;
+  // }
+  // return now;
 }
 
 void DataLab::processPV(const char* keyname, time_t now, float val) {
@@ -253,43 +271,46 @@ void DataLab::processPV(const char* keyname, time_t now, float val) {
   storage.store(keyname, now, val);
 }
 
-
-ulong LCDTimeout =0;
+ulong LCDTimeout = 0;
 int lcount = 0;
-double lastval=0;
-int lastid=0;
-ulong lastms=0;
-
+double lastval = 0;
+int lastid = 0;
+ulong lastms = 0;
+bool screenup = false;
 void DataLab::loop() {
   if (SEMbusy) {
     return;
   }
 
 #ifdef ISM5
-  if (M5.BtnA.wasPressed()){//Turn back ON screen
+  M5.BtnA.read();
+  if (M5.BtnA.wasPressed()) {  // Turn back ON screen
+    screenup = true;
     M5.Axp.ScreenBreath(12);
     LCDTimeout = millis() + 7000;
     M5.Lcd.fillScreen(TFT_BLACK);
-    M5.Lcd.setCursor(0,0);
-    //Status print
-    M5.Lcd.printf("DataLab - Uptime %01.0f:%02.0f:%02.2f\n", floor(millis()/3600000.0), floor((millis()/1000)%3600/60.0), (millis()/1000)%60/1.0);
+    M5.Lcd.setCursor(0, 0);
+    // Status print
+    M5.Lcd.printf("DataLab - Uptime %01.0f:%02.0f:%02.2f\n",
+                  floor(millis() / 3600000.0),
+                  floor((millis() / 1000) % 3600 / 60.0),
+                  (millis() / 1000) % 60 / 1.0);
     // char buf[300];
     // storage.getFileList(buf);
     // StaticJsonDocument<200> doc;
     // deserializeJson(doc,buf);
     // M5.Lcd.printf("Current file contains:\n");
-    if (lastval){
-      M5.Lcd.printf("Last value: %s:%g\n",sensorList[lastid]->name,lastval);
-      uint time = (millis()-lastms)/1000;
-      M5.Lcd.printf("%01.0f min %02.0f sec ago\n",floor(time/60)/1.0, (time)%60/1.0);
+    if (lastval) {
+      M5.Lcd.printf("Last value: %s:%g\n", sensorList[lastid]->name, lastval);
+      uint time = (millis() - lastms) / 1000;
+      M5.Lcd.printf("%01.0f min %02.0f sec ago\n", floor(time / 60) / 1.0, (time) % 60 / 1.0);
     }
-    
+
     M5.Lcd.printf("\nBattery: V: %.3fv  I: %.3fma\n", M5.Axp.GetBatVoltage(), M5.Axp.GetBatCurrent());
 
-  }else if (LCDTimeout < millis()){//Turn screen off.
+  } else if (screenup && LCDTimeout < millis()) {  // Turn screen off.
     M5.Axp.ScreenBreath(0);
   }
-  M5.update();
 
 #endif
   for (CSensor* sensor : sensorList) {
@@ -306,8 +327,8 @@ void DataLab::loop() {
       Serial.printf("Getting value for %s\n", currentSensor->name);
       char buffer[256];
       int size = currentSensor->getValuesAsJson(buffer);
-      lastms=millis();
-      lastid=sensorID;
+      lastms = millis();
+      lastid = sensorID;
       if (size > 0) {
         StaticJsonDocument<200> sensorDoc;
         deserializeJson(sensorDoc, buffer);
@@ -320,7 +341,7 @@ void DataLab::loop() {
           Serial.printf("Got JSON val: %s:%g\n", keyname, kvp.value().as<float>());
           // sensorsJValues[keyname] = kvp.value().as<float>();
           processPV(keyname, getNow(), kvp.value().as<float>());
-          lastval=kvp.value().as<float>();
+          lastval = kvp.value().as<float>();
         }
       } else {
         Serial.print("single Value:");
@@ -329,7 +350,7 @@ void DataLab::loop() {
         if (val != NAN) {
           // sensorsJValues[currentSensor->name] = val;
           processPV(currentSensor->name, getNow(), val);
-          lastval=val;
+          lastval = val;
         } else {
           Serial.println("return value is NAN, discard.");
         }

@@ -1,14 +1,14 @@
-#define DEFAULT_BUFFER_SIZE 4096
 #define DYNAMIC_JSON_DOCUMENT_SIZE 4096
 #include <semaphore.h>
 #include <DataLab.h>
+#define DEFAULT_BUFFER_SIZE 4096
 #include <ESP8266React.h>
 #include <LightMqttSettingsService.h>
 #include <LightStateService.h>
 #include <SensorSettingsService.h>
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
 #define SERIAL_BAUD_RATE 115200
-
+#include <time.h>
 #ifdef HASRTC
 RTC_TimeTypeDef RTC_TimeStruct;
 RTC_DateTypeDef RTC_DateStruct;
@@ -33,28 +33,41 @@ void setup() {
   esp8266React.begin();
 
 #ifdef ISM5
-//setting time from RTC
+  // setting time from RTC
   M5.Rtc.begin();
   M5.Rtc.GetTime(&RTC_TimeStruct);
   M5.Rtc.GetData(&RTC_DateStruct);
   struct tm tm;
-  tm.tm_year = RTC_DateStruct.Year-1900;
-  tm.tm_mon = RTC_DateStruct.Month-1;
+  tm.tm_year = RTC_DateStruct.Year - 1900;
+  tm.tm_mon = RTC_DateStruct.Month - 1;
   tm.tm_mday = RTC_DateStruct.Date;
   tm.tm_hour = RTC_TimeStruct.Hours;
   tm.tm_min = RTC_TimeStruct.Minutes;
   tm.tm_sec = RTC_TimeStruct.Seconds;
-  time_t time = mktime(&tm);
-  Serial.printf("Got time from RTC: Time is set to %d-%d-%d %d:%d:%d\n",tm.tm_year+1900,tm.tm_mon,tm.tm_mday,tm.tm_hour,tm.tm_min,tm.tm_sec);
-  Serial.printf("UTC is %lu\n",time);
+  setenv("TZ", "UTC0", 1);
+  tzset();
+  time_t utime = mktime(&tm);
+  Serial.printf("Got utime from RTC: Time is set to %d-%d-%d %d:%d:%d\n",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
+  Serial.printf("UTC is %lu\n", utime);
 
-  struct timeval now = {.tv_sec = time};
+  struct timeval now = {.tv_sec = utime};
   settimeofday(&now, nullptr);
-  
-  struct tm ts = *localtime(&time);
-  char       buf[80];
+
+  setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+  tzset();
+  time_t rawtime;
+  time(&rawtime);
+  struct tm ts = *localtime(&rawtime);
+  char buf[80];
   strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S %Z", &ts);
-  Serial.println(buf);
+  Serial.printf("Local time is %s\n", buf);
+
 #endif
 
   // File root = ESPFS.open("/www");

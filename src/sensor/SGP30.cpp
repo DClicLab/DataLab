@@ -37,11 +37,12 @@ class SGP30Sensor : public CSensor {
       return -1;
     }
 
-    if (! sgp.IAQmeasureRaw()) {
-        Serial.println("Raw Measurement failed");
-        return -1;
+    if (!sgp.IAQmeasureRaw()) {
+      Serial.println("Raw Measurement failed");
+      return -1;
     }
 
-    return sprintf(buffer, "{\"TVOC\":%d,\"eCO2\":%d,\"H2\":%d,\"Ethanol\":%d}", sgp.TVOC, sgp.eCO2, sgp.rawH2, sgp.rawEthanol);
+    return sprintf(
+        buffer, "{\"TVOC\":%d,\"eCO2\":%d,\"H2\":%d,\"Ethanol\":%d}", sgp.TVOC, sgp.eCO2, sgp.rawH2, sgp.rawEthanol);
   }
 };

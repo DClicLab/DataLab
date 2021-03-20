@@ -9,5 +9,5 @@ class AirQualityIndex {
   // calculate Atmo France indice from PM2.5 concentration (ug/m3)
   static int AtmofromPM10(float value);
   // calculate Atmo France indice from PM2.5 concentration (ug/m3)
-  static int AtmofromPM(float pm2_5,float pm10);
+  static int AtmofromPM(float pm2_5, float pm10);
 };

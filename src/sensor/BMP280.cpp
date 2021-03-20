@@ -33,7 +33,7 @@ class BMP280Sensor : public CSensor {
   short _sda = -1;
   short _scl = -1;
   float _sealevel;
-  uint _addr = 76;
+  uint _addr = 0x76;
   bool running;
 
  public:
@@ -43,6 +43,7 @@ class BMP280Sensor : public CSensor {
   BMP280Sensor(){};
 
   BMP280Sensor(JsonObject& sensorConf) : CSensor(sensorConf) {
+    Serial.println("Creating BMP280SENSOR");
     _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
     _scl = sensorConf["driver"]["config"]["sclPin"].as<int>();
     _sealevel = sensorConf["driver"]["config"]["seaLevelHpa"].as<float>();
@@ -66,10 +67,13 @@ class BMP280Sensor : public CSensor {
                     Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                     Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                     Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+
+    Serial.printf("BEGIN Running is: %d\n", running);
   }
 
   float getValue() {
-    if (!running || (running = bme.begin(0x76))) {
+    Serial.printf("GETVALUE Running is: %d\n", running);
+    if (!running && (running = bme.begin(_addr))) {
       Serial.println("Could not find a valid BMP280 sensor, check wiring!");
       return 0;
     }
@@ -78,6 +82,11 @@ class BMP280Sensor : public CSensor {
   }
 
   int getValuesAsJson(char* dest) {
+    Serial.printf("GETVALUEJSON Running is: %d\n", running);
+    if (!running && (running = bme.begin(_addr))) {
+      Serial.println("Could not find a valid BMP280 sensor, check wiring!");
+      return 0;
+    }
     return sprintf(dest,
                    "{\"pressure\":%f,\"temperature\":%f,\"altitude\":%f}",
                    bme.readPressure(),
