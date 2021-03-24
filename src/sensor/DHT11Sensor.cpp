@@ -66,11 +66,6 @@ class DHT11Sensor : public CSensor {
       Serial.println(F("Failed to read from DHT sensor!"));
       return -1;
     }
-    Serial.print(F("Humidity: "));
-    Serial.print(h);
-    Serial.print(F("%  Temperature: "));
-    Serial.print(t);
-    Serial.print(F("°C "));
     return t;
   };
 };

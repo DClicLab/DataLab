@@ -75,6 +75,12 @@ void Storage::begin() {
     }
     root.close();
   }
+  if( LITTLEFS.exists("/config/resetconf")){
+      LITTLEFS.remove("/config/sensorSettings.json");
+      LITTLEFS.remove("/config/resetconf");
+      esp_restart();
+  }
+
   loadIndex();
   currentTS = updateCurrentTS();
 }
@@ -177,13 +183,10 @@ time_t Storage::getFirstTS(time_t after = 0L) {
 void Storage::deleteTS(time_t ts) {
   char buffer[22];
   sprintf(buffer, "/data/d/%lu", ts);
+  File f = LITTLEFS.open(buffer);
+  f.close();
   LITTLEFS.remove(buffer);
   updateFileList();
-}
-
-void Storage::deleteAll() {
-  LITTLEFS.open("/data/d/delete", "w");  // dealt with in begin()
-  ESP.restart();
 }
 
 void Storage::freeSpaceIfNeeded() {

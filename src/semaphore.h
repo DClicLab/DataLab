@@ -1,5 +1,5 @@
 #if !defined(SEMAPHORE)
 #define SEMAPHORE
-bool SEMbusy;
+unsigned char SEMbusy;
 
 #endif // SEMAPHORE

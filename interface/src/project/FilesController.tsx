@@ -8,14 +8,12 @@ import { ENDPOINT_ROOT } from '../api';
 import { ErrorButton, restController, RestControllerProps, RestFormLoader, SectionContent, } from '../components';
 import { Box, Button, createStyles, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, Theme, Typography, withStyles, WithStyles } from '@material-ui/core';
 import DeleteIcon from '@material-ui/icons/Delete';
-import GetApp from '@material-ui/icons/GetApp';
 import IconButton from '@material-ui/core/IconButton';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import { DataFile, FilesState } from './types';
 import { format } from 'date-fns';
 import { toInteger } from 'lodash';
 import { redirectingAuthorizedFetch } from '../authentication';
-import { red } from '@material-ui/core/colors';
 export const FILES_ENDPOINT = ENDPOINT_ROOT + "files";
 
 const mystyles = (theme: Theme) => createStyles(
@@ -148,7 +146,7 @@ class FileList extends Component<FileListProps & RouteComponentProps & Authentic
                       <TableCell>{file.diff == 0 ? "Unknown" : tsToTime(Number(file.end))}</TableCell>
                       <TableCell>{file.nval}</TableCell>
                       <TableCell>{toInteger(file.nval*7/1000)}KB</TableCell>
-                      <TableCell><IconButton disabled={!this.props.authenticatedContext.me.admin || i<=this.props.data!.files!.length-1} size="small" aria-label="Delete" onClick={() => this.deleteFile(file)}><DeleteIcon /></IconButton></TableCell>
+                      <TableCell><IconButton disabled={!this.props.authenticatedContext.me.admin || i==this.props.data!.files!.length-1} size="small" aria-label="Delete" onClick={() => this.deleteFile(file)}><DeleteIcon /></IconButton></TableCell>
                       {/* <TableCell><a href={ENDPOINT_ROOT + "getjson"} download target="_blank"><IconButton size="small" aria-label="Download"><GetApp /></IconButton></a></TableCell> */}
                     </TableRow>
                   ))

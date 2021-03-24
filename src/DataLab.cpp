@@ -9,11 +9,11 @@ vector<int> queue;  // Sensors needed to be pulled
 
 Storage storage;
 
-extern bool SEMbusy;
+extern unsigned char SEMbusy;
 
 void setBusy(AsyncWebServerRequest* request) {
-  SEMbusy = true;
-  request->onDisconnect([] { SEMbusy = false; });
+  SEMbusy++;
+  request->onDisconnect([] { SEMbusy--; });
 }
 
 class SemaphoreHandler : public AsyncWebHandler {
@@ -26,10 +26,10 @@ class SemaphoreHandler : public AsyncWebHandler {
   bool canHandle(AsyncWebServerRequest* request) {
     if (request->url().startsWith("/raw/")) {
       Serial.printf("A /raw request is comming!\n");
-      SEMbusy = true;
+      SEMbusy++;
       request->onDisconnect([] {
         Serial.println("Request completed, back to sensor work");
-        SEMbusy = false;
+        SEMbusy--;
       });
     };
     return false;
@@ -47,9 +47,9 @@ void DataLab::onWSEvent(AsyncWebSocket* server,
   }
 }
 
-DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) {
+DataLab::DataLab(AsyncWebServer* server, AsyncMqttClient* mqttClient, SensorSettingsService* sensorSettings) :
+    _mqttClient(mqttClient), sensorsSS(sensorSettings) {
   Serial.println("Starting DataLab");
-  sensorsSS = sensorSettings;
   memset(sensorList, 0, sizeof(sensorList));
 
   server->on("/list", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -66,11 +66,11 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
   });
 
   server->on("/rest/files", HTTP_GET, [](AsyncWebServerRequest* request) {
-    SEMbusy = true;
+    SEMbusy++;
     char buffer[4096];
     storage.getFileList(buffer);
     request->send(200, "application/json", buffer);
-    request->onDisconnect([] { SEMbusy = false; });
+    request->onDisconnect([] { SEMbusy--; });
   });
 
   server->on("/rest/indexes", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -78,13 +78,25 @@ DataLab::DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings) 
     request->send(response);
   });
 
+
+
+  server->on("/rest/resetconf", HTTP_POST, [](AsyncWebServerRequest* request) {
+    request->send(200, "", "OK Deleting");
+    request->onDisconnect([] { 
+      LITTLEFS.open("/config/resetconf", "w");  // dealt with in begin()
+      ESP.restart();
+     });
+  });
+
   server->on("/rest/deleteall", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "", "OK Deleting");
-    request->onDisconnect([] { storage.deleteAll(); });
+    request->onDisconnect([] { 
+      LITTLEFS.open("/data/d/delete", "w");  // dealt with in begin()
+      ESP.restart();
+     });
   });
 
   server->on("/rest/files/delete", HTTP_POST, [](AsyncWebServerRequest* request) {
-    SEMbusy = true;
     Serial.printf("Got delete request for %s\n", request->getParam("ts", true)->value().c_str());
     int ts = request->getParam("ts", true)->value().toInt();
     if (ts != NAN) {
@@ -202,7 +214,7 @@ void DataLab::start() {
     i++;
   }
   Serial.println("Done Adding sensors");
-  SEMbusy = false;
+  SEMbusy = 0;
 
   // do whatever is required to react to the new settings
 }

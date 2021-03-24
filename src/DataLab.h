@@ -34,7 +34,7 @@
 class DataLab  {
  public:
     // DataLab(AsyncWebServer* server, FS* fs, SensorSettingsService sensorSettings);
-    DataLab(AsyncWebServer* server, SensorSettingsService* sensorSettings);
+    DataLab(AsyncWebServer* server, AsyncMqttClient* mqttClient, SensorSettingsService* sensorSettings);
     ~DataLab();
     void reconfigureTheService();
     void onConfigUpdated();
@@ -51,6 +51,8 @@ class DataLab  {
   private:
     void static getValueForSensor(int i);
     time_t getNow();
+    AsyncMqttClient* _mqttClient;
+
     void static onWSEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len);
     
   protected:

@@ -77,7 +77,8 @@ class DemoInformation extends Component<DemoInformationProps, IState> {
   });
   
   updateSensorList = (sensor: SensorValue) => {
-    const sensors = this.state.sens!.filter(u => u.name !== sensor.name);
+    if (sensor===null) return;
+    const sensors = this.state.sens===null?[]:this.state.sens!.filter(u => u.name !== sensor.name);
     sensor.classStyle = this.props.classes.animation_trigger;
     sensor.resetAnim=true;
     if (sensors.length === this.state.sens!.length) {

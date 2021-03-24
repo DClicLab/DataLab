@@ -49,7 +49,7 @@ void  SensorConfig::read(SensorConfig& settings, JsonObject& root) {
 StateUpdateResult  SensorConfig::update(JsonObject& root, SensorConfig& settings) {
   Serial.println("iN update");
   root.remove("drivers");
-  SEMbusy = true;
+  SEMbusy = 1;
   serializeJson(root, jsonstring);
 
   for (size_t i = 0; i < (sizeof(sensorList) / sizeof(CSensor*)); i++) {

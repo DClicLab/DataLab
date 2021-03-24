@@ -3,8 +3,8 @@
 #include <DataLab.h>
 #define DEFAULT_BUFFER_SIZE 4096
 #include <ESP8266React.h>
-#include <LightMqttSettingsService.h>
-#include <LightStateService.h>
+// #include <LightMqttSettingsService.h>
+// #include <LightStateService.h>
 #include <SensorSettingsService.h>
 #define CONFIG_LITTLEFS_SPIFFS_COMPAT 1
 #define SERIAL_BAUD_RATE 115200
@@ -24,7 +24,7 @@ ESP8266React esp8266React(&server);
 
 SensorSettingsService sensorService =
     SensorSettingsService(&server, esp8266React.getFS(), esp8266React.getSecurityManager());
-DataLab datalab = DataLab(&server, &sensorService);
+DataLab datalab = DataLab(&server,esp8266React.getMqttClient(), &sensorService);
 void setup() {
   // start serial and filesystem
   Serial.begin(SERIAL_BAUD_RATE);

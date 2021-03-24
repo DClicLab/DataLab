@@ -1,10 +1,11 @@
 import React, { Fragment } from 'react';
 import { ValidatorForm } from 'react-material-ui-form-validator';
 
-import { Table, TableBody, TableCell, TableHead, TableFooter, TableRow, withWidth, WithWidthProps, isWidthDown } from '@material-ui/core';
+import { Table, TableBody, TableCell, TableHead, TableFooter, TableRow, withWidth, WithWidthProps, isWidthDown, Box, Dialog, DialogTitle, DialogContent, DialogActions } from '@material-ui/core';
 import { Button } from '@material-ui/core';
 
 import EditIcon from '@material-ui/icons/Edit';
+import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import DeleteIcon from '@material-ui/icons/Delete';
 import CloseIcon from '@material-ui/icons/Close';
 import CheckIcon from '@material-ui/icons/Check';
@@ -12,11 +13,12 @@ import IconButton from '@material-ui/core/IconButton';
 import SaveIcon from '@material-ui/icons/Save';
 import CompassCalibration from '@material-ui/icons/CompassCalibration';
 
-import { withAuthenticatedContext, AuthenticatedContextProps } from '../authentication';
-import { RestFormProps, FormActions, FormButton, extractEventValue } from '../components';
+import { withAuthenticatedContext, AuthenticatedContextProps, redirectingAuthorizedFetch } from '../authentication';
+import { RestFormProps, FormActions, FormButton, extractEventValue, ErrorButton } from '../components';
 
 import SensorForm from './SensorForm';
 import { SensorsSettings, Sensor } from './types';
+import { ENDPOINT_ROOT } from '../api';
 
 
 
@@ -35,14 +37,18 @@ type ManageSensorsFormProps = RestFormProps<SensorsSettings> & AuthenticatedCont
 
 type ManageSensorsFormState = {
   creating: boolean;
+  processing: boolean;
+  confirmReset: boolean;
   sensor?: Sensor;
   driverlist?: string[];
 }
 
 class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSensorsFormState> {
-
+  
   state: ManageSensorsFormState = {
-    creating: false
+    confirmReset: false,
+    processing: false,
+    creating: false,
   };
 
   createSensor = () => {
@@ -57,7 +63,7 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
   };
   uniqueSensorname = (name: string) => {
 
-    return this.props.data.sensors===undefined || !this.props.data.sensors.find(u => u.name === name);
+    return this.props.data.sensors===null || !this.props.data.sensors.find(u => u.name === name);
   }
 
   // noAdminConfigured = () => {
@@ -89,7 +95,7 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
     
     if (sensor) {
       const { data } = this.props;
-      const sensors = data.sensors.filter(u => u.name !== sensor.name);
+      const sensors = data.sensors===null ? [] :data.sensors.filter(u => u.name !== sensor.name);
       // sensors.push(sensor);
       sensors.push(JSON.parse(JSON.stringify(sensor)))//need a deep clone here
       this.props.setData({ ...data, sensors });
@@ -131,11 +137,60 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
     var m = Math.floor(d % 3600 / 60);
     var s = Math.floor(d % 3600 % 60);
 
-    var hDisplay = h > 0 ? h + (h === 1 ? " hour, " : " hours, ") : "";
-    var mDisplay = m > 0 ? m + (m === 1 ? " minute, " : " minutes, ") : "";
+    var hDisplay = h > 0 ? h + (h === 1 ? " hour " : " hours ") : "";
+    var mDisplay = m > 0 ? m + (m === 1 ? " minute " : " minutes ") : "";
     var sDisplay = s > 0 ? s + (s === 1 ? " second" : " seconds") : "";
     return hDisplay + mDisplay + sDisplay; 
   }
+
+  onDeleteAll = () => {
+    this.setState({ confirmReset: true });
+  }
+
+  onDeleteAllRejected = () => {
+    this.setState({ confirmReset: false });
+  }
+
+  onDeleteAllConfirmed = () => {
+    this.setState({ processing: true });
+    redirectingAuthorizedFetch(ENDPOINT_ROOT+"resetConf", { method: 'POST' })
+      .then(response => {
+        if (response.status === 200) {
+          this.props.enqueueSnackbar("Delete all in progress. Refreshing page in 5 sec.", { variant: 'error' });
+          this.setState({ processing: false, confirmReset: false });
+          setTimeout(() => {
+            window.location.reload(false);
+          }, 5000);
+        } else {
+          throw Error("Invalid status code: " + response.status);
+        }
+      })
+      .catch(error => {
+        this.props.enqueueSnackbar(error.message || "Problem factory resetting device", { variant: 'error' });
+        this.setState({ processing: false });
+      });
+  }
+  renderDeleteAllDialog() {
+    return (
+      <Dialog
+        open={this.state.confirmReset}
+        onClose={this.onDeleteAllRejected}
+      >
+        <DialogTitle>Confirm Delete All</DialogTitle>
+        <DialogContent dividers>
+          Are you sure you want to delete all sensor configuration?<br/>The device will restart.
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={this.onDeleteAllRejected} color="secondary">
+            Cancel
+          </Button>
+          <ErrorButton startIcon={<DeleteSweepIcon />} variant="contained" onClick={this.onDeleteAllConfirmed} disabled={this.state.processing} autoFocus>
+            Reset
+          </ErrorButton>
+        </DialogActions>
+      </Dialog>
+    )
+  }  
 
   render() {
     const { width, data } = this.props;
@@ -236,7 +291,13 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
             {/* <FormButton startIcon={<SaveIcon />} variant="contained" color="primary" type="submit" disabled={this.noAdminConfigured()}> */}
             <FormButton startIcon={<SaveIcon />} variant="contained" color="primary" type="submit" >
               Save
-            </FormButton>
+            </FormButton>              
+            
+        {this.props.authenticatedContext.me.admin?
+            <ErrorButton startIcon={<DeleteSweepIcon />} variant="contained" onClick={this.onDeleteAll}>
+                Reset configuration
+              </ErrorButton>
+              :""}
           </FormActions>
         </ValidatorForm>
         {
@@ -253,6 +314,7 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
             uniqueSensorname={this.uniqueSensorname}
           />
         }
+               {this.renderDeleteAllDialog()}
       </Fragment>
     );
   }

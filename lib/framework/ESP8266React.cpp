@@ -54,33 +54,25 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
       });
 #else
   // Serve static resources from /www/
-  
-esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
+
   server->serveStatic("/js/", ESPFS, "/www/js/").setCacheControl("max-age=6000");
-  server->serveStatic("/css/", ESPFS, "/www/css/").setCacheControl("max-age=6000");;
-  server->serveStatic("/fonts/", ESPFS, "/www/fonts/").setCacheControl("max-age=6000");;
+  server->serveStatic("/css/", ESPFS, "/www/css/").setCacheControl("max-age=6000");
+  server->serveStatic("/fonts/", ESPFS, "/www/fonts/").setCacheControl("max-age=6000");
   server->serveStatic("/app/", ESPFS, "/www/app/");
   server->serveStatic("/favicon.ico", ESPFS, "/www/favicon.ico");
   server->serveStatic("/index.html", ESPFS, "/www/index.html");
   // Serving all other get requests with "/www/index.htm"
   // OPTIONS get a straight up 200 response
   server->onNotFound([](AsyncWebServerRequest* request) {
-    Serial.printf("got 404 request for %s/%s\n",request->host().c_str(),request->url().c_str());
-    
+    Serial.printf("got 404 request for %s/%s\n", request->host().c_str(), request->url().c_str());
     if (request->method() == HTTP_GET) {
-
-      if (strstr(request->host().c_str(),"connect") != NULL || 
-          strstr(request->host().c_str(),"msft") != NULL ||
-          request->host().startsWith("192.168")  ||
-          strcmp(request->url().c_str(),"/") == 0   ||
-          request->url().startsWith("/project")   ||
-          request->hasHeader("Referer"))    
-      {
+      if (request->host().indexOf("connect") >= 0 || request->host().indexOf("msft") >= 0 ||
+          request->host().startsWith("192.168") || request->url().equals("/") ||
+          request->url().startsWith("/project") || request->hasHeader("Referer")) {
         request->redirect("/index.html");
       }
       // request->send(ESPFS, "/www/index.html");
-    } else
-     if (request->method() == HTTP_OPTIONS) {
+    } else if (request->method() == HTTP_OPTIONS) {
       request->send(200);
     } else {
       request->send(404);
@@ -99,7 +91,7 @@ esp_log_level_set("esp_littlefs", ESP_LOG_VERBOSE);
 
 void ESP8266React::begin() {
 #ifdef ESP32
-  ESPFS.begin(false, "",35);
+  ESPFS.begin(false, "", 35);
 #elif defined(ESP8266)
   ESPFS.begin();
 #endif

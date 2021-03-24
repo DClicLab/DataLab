@@ -30,8 +30,8 @@
 class BMP280Sensor : public CSensor {
  private:
   Adafruit_BMP280 bme;
-  short _sda = -1;
-  short _scl = -1;
+  // short _sda = -1;
+  // short _scl = -1;
   float _sealevel;
   uint _addr = 0x76;
   bool running;
@@ -40,21 +40,22 @@ class BMP280Sensor : public CSensor {
   static constexpr const char* description =
       "{\"name\":\"BMP280\",\"config\":{\"sdaPin\":-1,\"sclPin\":-1,\"address\":\"0x76\",\"seaLevelHpa\":\"1013.25\"}}";
 
-  BMP280Sensor(){};
+  BMP280Sensor(){
+  };
 
   BMP280Sensor(JsonObject& sensorConf) : CSensor(sensorConf) {
     Serial.println("Creating BMP280SENSOR");
-    _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
-    _scl = sensorConf["driver"]["config"]["sclPin"].as<int>();
+    // _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
+    // _scl = sensorConf["driver"]["config"]["sclPin"].as<int>();
     _sealevel = sensorConf["driver"]["config"]["seaLevelHpa"].as<float>();
     _addr = (int)strtol(sensorConf["driver"]["config"]["address"].as<char*>(), NULL, 0);
-    Wire.begin(_sda, _scl);
+    // Wire.begin(_sda, _scl);
   };
 
   void begin() {
     running = bme.begin(_addr);
     if (!running) {
-      Serial.printf("sda:%d sdc:%d add:%#04x", _sda, _scl, _addr);
+      // Serial.printf("sda:%d sdc:%d add:%#04x", _sda, _scl, _addr);
       Serial.println("Could not find a valid BMP280 sensor, check wiring!");
     } else {
       Serial.println("BMP280 found!");

@@ -9,6 +9,7 @@
 #include <WebSocketTxRx.h>
 #include <FSPersistence.h>
 #include <sensor/CSensor.h>
+#include "sensor/DHT12Sensor.cpp"
 #include "sensor/BMP280.cpp"
 #include "sensor/BMPsensor.cpp"
 #include "sensor/DHT11Sensor.cpp"
@@ -23,7 +24,7 @@
 #define SENSOR_SETTINGS_ENDPOINT_PATH "/rest/sensorsState"
 #define SENSOR_SETTINGS_SOCKET_PATH "/ws/sensorsState"
 
-extern bool SEMbusy;
+extern unsigned char SEMbusy;
 
 class SensorConfig {
  public:
@@ -42,9 +43,14 @@ class SensorConfig {
       SGP30Sensor::description,
       TestSensor::description,
       HM3301Sensor::description,
+      DHT12Sensor::description,
   };
 
   static CSensor* getSensor(JsonObject& sensorConf) {
+    Serial.println("Starting I2C");
+    Wire.begin(0,26);
+
+
     Serial.println("Adding sensor with conf");
     serializeJsonPretty(sensorConf, Serial);
 
@@ -63,6 +69,9 @@ class SensorConfig {
     }
     if (strcmp(sensorConf["driver"]["name"], "DHT11") == 0) {
       return new DHT11Sensor(sensorConf);
+    }
+    if (strcmp(sensorConf["driver"]["name"], "DHT12") == 0) {
+      return new DHT12Sensor(sensorConf);
     }
     if (strcmp(sensorConf["driver"]["name"], "FreeMem") == 0) {
       return new FreeMemSensor(sensorConf);
