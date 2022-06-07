@@ -5,8 +5,8 @@
 #ifdef ESP8266
 #include <FS.h>
 #else
-#define SPIFFS LITTLEFS
-#include <LITTLEFS.h>
+#define SPIFFS LittleFS
+#include <LittleFS.h>
 // #include "SPIFFS.h"
 #endif
 

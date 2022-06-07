@@ -31,7 +31,7 @@
 void Storage::loadIndex() {
   Serial.println("In loadIndex");
 
-  File file = LITTLEFS.open("/data/index", "r");
+  File file = LittleFS.open("/data/index", "r");
   StaticJsonDocument<1024> doc;
   // deserializeJson(doc, file);
   DeserializationError error = deserializeJson(doc, file);
@@ -52,7 +52,7 @@ void Storage::saveIndex() {
   }
   buffer[strlen(buffer) - 1] = ']';  // replace last , by ]
   Serial.printf("Saved index: %s\n", buffer);
-  File file = LITTLEFS.open("/data/index", "w+");
+  File file = LittleFS.open("/data/index", "w+");
   file.write((const uint8_t*)buffer, strlen(buffer));
   Serial.printf("File size %d\n", file.size());
   file.close();
@@ -61,23 +61,23 @@ void Storage::saveIndex() {
 }
 
 void Storage::begin() {
-  LITTLEFS.mkdir("/data");
-  LITTLEFS.mkdir("/data/d");
-  if (LITTLEFS.exists("/data/d/delete")) {
-    File root = LITTLEFS.open("/data/d");
+  LittleFS.mkdir("/data");
+  LittleFS.mkdir("/data/d");
+  if (LittleFS.exists("/data/d/delete")) {
+    File root = LittleFS.open("/data/d");
     File file;
     while (file = root.openNextFile()) {
       char buf[40];
       strcpy(buf, file.name());
       file.close();
       Serial.printf("deleting %s\n", buf);
-      LITTLEFS.remove(buf);
+      LittleFS.remove(buf);
     }
     root.close();
   }
-  if( LITTLEFS.exists("/config/resetconf")){
-      LITTLEFS.remove("/config/sensorSettings.json");
-      LITTLEFS.remove("/config/resetconf");
+  if( LittleFS.exists("/config/resetconf")){
+      LittleFS.remove("/config/sensorSettings.json");
+      LittleFS.remove("/config/resetconf");
       esp_restart();
   }
 
@@ -110,7 +110,7 @@ time_t getLastTsDiff(File f) {
 void Storage::updateFileList() {
   // Serial.printf("GETFIRST =entering with %lu\n", after);
   fileList.clear();
-  File root = LITTLEFS.open("/data/d", "w");
+  File root = LittleFS.open("/data/d", "w");
   File file = root.openNextFile();
   // Not sure that we could take always the first file of openNextFile()
   while (file) {
@@ -131,7 +131,7 @@ void Storage::updateFileList() {
 void Storage::getFileList(char* buffer) {
   updateFileList();
   int pos = sprintf(
-      buffer, "{\"space\":{\"total\":\"%d\",\"used\":\"%d\"},\"files\":[", LITTLEFS.totalBytes(), LITTLEFS.usedBytes());
+      buffer, "{\"space\":{\"total\":\"%d\",\"used\":\"%d\"},\"files\":[", LittleFS.totalBytes(), LittleFS.usedBytes());
   for (auto&& file : fileList) {
     pos += sprintf(buffer + pos,
                    "{\"name\":\"%s\",\"start\":\"%lu\",\"end\":\"%lu\",\"nval\":\"%d\",\"diff\":\"%d\"},",
@@ -183,14 +183,14 @@ time_t Storage::getFirstTS(time_t after = 0L) {
 void Storage::deleteTS(time_t ts) {
   char buffer[22];
   sprintf(buffer, "/data/d/%lu", ts);
-  File f = LITTLEFS.open(buffer);
+  File f = LittleFS.open(buffer);
   f.close();
-  LITTLEFS.remove(buffer);
+  LittleFS.remove(buffer);
   updateFileList();
 }
 
 void Storage::freeSpaceIfNeeded() {
-  if ((LITTLEFS.totalBytes() - LITTLEFS.usedBytes()) < 40000) {
+  if ((LittleFS.totalBytes() - LittleFS.usedBytes()) < 40000) {
     deleteTS(getFirstTS());  // remove older file
   }
 }
@@ -203,7 +203,7 @@ void Storage::rotateTS() {
   time(&now);
   currentTS = now;
   sprintf(buffer, "/data/d/%lu", currentTS);
-  File file = LITTLEFS.open(buffer, "w+");
+  File file = LittleFS.open(buffer, "w+");
   file.close();
   updateFileList();
 }
@@ -238,7 +238,7 @@ void Storage::store(int id, time_t ts, float val) {
   char buffer[22];
 
   sprintf(buffer, "/data/d/%lu", currentTS);
-  File file = LITTLEFS.open(buffer, "a");
+  File file = LittleFS.open(buffer, "a");
   if (!file) {
     Serial.println("file open failed");
     return;
@@ -321,7 +321,7 @@ uint Storage::getNameForID(int id, char* buffer) {
 //   // Serial.printf("GETJSON - loading tsfile: %lu for start at %lu\n", tsfile, tsstart);
 
 //   sprintf(filename, "/data/d/%lu", tsfile);
-//   File file = LITTLEFS.open(filename, "r");
+//   File file = LittleFS.open(filename, "r");
 
 //   uint bufferpos = 0;
 //   char pointname[64];

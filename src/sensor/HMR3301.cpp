@@ -26,16 +26,16 @@ class HM3301Sensor : public CSensor {
   HM3301Sensor(JsonObject& sensorConf) : CSensor(sensorConf) {
     // Extract configuration from the JsonObject
     // pin = sensorConf["config"]["pin"].as<int>();
-    _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
-    _scl = sensorConf["driver"]["config"]["sclPin"].as<int>();
+    // _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
+    // _scl = sensorConf["driver"]["config"]["sclPin"].as<int>();
   };
 
   // Make sure to give your sensor class a unique name and a default full configuration matching the creator
-  static constexpr const char* description = "{\"name\":\"HM3301\",\"config\":{\"sdaPin\":-1,\"sclPin\":-1}}";
+  static constexpr const char* description = "{\"name\":\"HM3301\",\"i2c\":1";
 
   // This function is call after constructor
   void begin() {
-    Wire.begin(_sda, _scl);
+    // Wire.begin(_sda, _scl);
     sensor.begin();
   };
 

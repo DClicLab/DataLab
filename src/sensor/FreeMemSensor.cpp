@@ -12,7 +12,7 @@ public:
     FreeMemSensor(JsonObject& sensorConf): CSensor(sensorConf){
         //no need for extra config
     };
-    static constexpr const char*  description = "{\"name\":\"FreeMem\",\"config\":{}}\"";
+    static constexpr const char*  description = "{\"name\":\"FreeMem\"}";
 
     void begin()
     {

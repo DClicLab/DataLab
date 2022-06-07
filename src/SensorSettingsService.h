@@ -26,11 +26,19 @@
 
 extern unsigned char SEMbusy;
 
+struct I2CConf{
+  bool enabled;
+  char conf[8];
+  int sda;
+  int scl;
+};
 class SensorConfig {
  public:
   static CSensor* sensorList[5];
   // static StaticJsonDocument<4096> jsonState;
   static char jsonstring[4096];
+  static I2CConf i2cconf;
+
 
   // Add all sensors here
   static constexpr const char* driverList[] = {
@@ -47,9 +55,8 @@ class SensorConfig {
   };
 
   static CSensor* getSensor(JsonObject& sensorConf) {
-    Serial.println("Starting I2C");
-    Wire.begin(0,26);
-
+    // Serial.println("Starting I2C");
+    // Wire.begin(0,26);
 
     Serial.println("Adding sensor with conf");
     serializeJsonPretty(sensorConf, Serial);

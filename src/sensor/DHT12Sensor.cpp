@@ -16,7 +16,7 @@ class DHT12Sensor : public CSensor {
   uint _addr;
  public:
  static constexpr const char* description = 
-      "{\"name\":\"DHT12\",\"config\":{\"sdaPin\":-1,\"sclPin\":-1,\"address\":\"0x5C\"}}";
+      "{\"name\":\"DHT12\",\"config\":{\"address\":\"0x5C\"},\"i2c\":1}";
 
   DHT12Sensor(JsonObject& sensorConf) : CSensor(sensorConf) {
     // _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
@@ -28,7 +28,7 @@ class DHT12Sensor : public CSensor {
   void begin() {
     // Wire.begin(_sda, _scl);
 
-    // dht12.begin();
+    dht12.begin();
     // pinMode(pin, OUTPUT);
     
   };

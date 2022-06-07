@@ -7,28 +7,23 @@
 class Vlx53l0x : public CSensor {
  private:
   Adafruit_VL53L0X lox = Adafruit_VL53L0X();
-  int scl;
-  int sda;
-  TwoWire I2CVL = TwoWire(0);
+  int _addr;
 
  public:
-  Vlx53l0x(){};
   Vlx53l0x(JsonObject& sensorConf) : CSensor(sensorConf) {
-    sda = sensorConf["driver"]["config"]["sda"].as<int>();
-    scl = sensorConf["driver"]["config"]["scl"].as<int>();
+    _addr = (int)strtol(sensorConf["driver"]["config"]["address"].as<char*>(), NULL, 0);
   };
 
-  static constexpr const char* description = "{\"name\":\"ToF\",\"config\":{\"sda\":32,\"scl\":33}}\"";
+  static constexpr const char* description = "{\"name\":\"ToF\",\"config\":{\"address\":\"0x29\"},\"i2c\":1}\"";
 
   void begin() {
-    I2CVL.begin(sda, scl);
-    lox.begin(VL53L0X_I2C_ADDR, true, &I2CVL);
+    lox.begin(_addr);
   };
 
   // This function is called to return the sensor value at every interval
   float getValue() {
     VL53L0X_RangingMeasurementData_t measure;
-    lox.rangingTest(&measure, true);
+    lox.rangingTest(&measure);
     return measure.RangeMilliMeter;
   };
 };

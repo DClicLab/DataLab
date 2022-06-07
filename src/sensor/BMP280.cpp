@@ -38,7 +38,7 @@ class BMP280Sensor : public CSensor {
 
  public:
   static constexpr const char* description =
-      "{\"name\":\"BMP280\",\"config\":{\"sdaPin\":-1,\"sclPin\":-1,\"address\":\"0x76\",\"seaLevelHpa\":\"1013.25\"}}";
+      "{\"name\":\"BMP280\",\"config\":{\"address\":\"0x76\",\"seaLevelHpa\":\"1013.25\"},\"i2c\":1}";
 
   BMP280Sensor(){
   };

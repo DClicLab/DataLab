@@ -33,14 +33,14 @@ class BMP180Sensor : public CSensor {
   bool running;
 
  public:
-  static constexpr const char* description = "{\"name\":\"BMP180\",\"config\":{\"sdaPin\":-1,\"sclPin\":-1}}\"";
+  static constexpr const char* description = "{\"name\":\"BMP180\"}";
 
   BMP180Sensor(){};
 
   BMP180Sensor(JsonObject& sensorConf) : CSensor(sensorConf) {
     // no need for extra config
-    _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
-    _scl = sensorConf["driver"]["config"]["sclPin"].as<int>();
+    // _sda = sensorConf["driver"]["config"]["sdaPin"].as<int>();
+    // _scl = sensorConf["driver"]["config"]["sclPin"].as<int>();
   };
 
   void begin() {

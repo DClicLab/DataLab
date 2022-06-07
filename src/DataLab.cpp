@@ -83,7 +83,7 @@ DataLab::DataLab(AsyncWebServer* server, AsyncMqttClient* mqttClient, SensorSett
   server->on("/rest/resetconf", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "", "OK Deleting");
     request->onDisconnect([] { 
-      LITTLEFS.open("/config/resetconf", "w");  // dealt with in begin()
+      LittleFS.open("/config/resetconf", "w");  // dealt with in begin()
       ESP.restart();
      });
   });
@@ -91,7 +91,7 @@ DataLab::DataLab(AsyncWebServer* server, AsyncMqttClient* mqttClient, SensorSett
   server->on("/rest/deleteall", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "", "OK Deleting");
     request->onDisconnect([] { 
-      LITTLEFS.open("/data/d/delete", "w");  // dealt with in begin()
+      LittleFS.open("/data/d/delete", "w");  // dealt with in begin()
       ESP.restart();
      });
   });
@@ -205,10 +205,14 @@ void DataLab::start() {
       sensorList[i] = sensor;
       Serial.printf("Sensor %s is Enabled\n", sensor->name);
       sensor->begin();
+      if (sensor->interval){
       Serial.printf("Attaching Sensor %s, interval: %d\n", sensor->name, sensor->interval);
       Serial.printf(" senor at %p \n", sensor);
       ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
-
+      }
+      else{
+        Serial.println("ERROR - Not attaching sensor with interval 0s");
+      }
       Serial.println("Done attaching sensor");
     }
     i++;
@@ -275,6 +279,7 @@ void DataLab::processPV(const char* keyname, time_t now, float val) {
   //   snprintf(str, sizeof(str), "{\"%s\":%g}", keyname, val);
   //   cloudService->publishValue(str);
   // }
+
   Serial.printf("Calling store on %s, %lu, %g\n", keyname, now, val);
   if (ws.getClients().length()) {
     ws.printfAll(

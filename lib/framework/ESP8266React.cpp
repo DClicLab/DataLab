@@ -64,14 +64,14 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
   // Serving all other get requests with "/www/index.htm"
   // OPTIONS get a straight up 200 response
   server->onNotFound([](AsyncWebServerRequest* request) {
-    Serial.printf("got 404 request for %s/%s\n", request->host().c_str(), request->url().c_str());
     if (request->method() == HTTP_GET) {
       if (request->host().indexOf("connect") >= 0 || request->host().indexOf("msft") >= 0 ||
           request->host().startsWith("192.168") || request->url().equals("/") ||
           request->url().startsWith("/project") || request->hasHeader("Referer")) {
         request->redirect("/index.html");
       }
-      // request->send(ESPFS, "/www/index.html");
+      // if (request->method() == HTTP_GET) {
+      //   request->send(ESPFS, "/www/index.html");
     } else if (request->method() == HTTP_OPTIONS) {
       request->send(200);
     } else {
