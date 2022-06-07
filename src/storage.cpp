@@ -108,24 +108,36 @@ time_t getLastTsDiff(File f) {
 
 // get first file after ts after
 void Storage::updateFileList() {
+  // log_e("Starting updatefile");
   // Serial.printf("GETFIRST =entering with %lu\n", after);
   fileList.clear();
-  File root = LittleFS.open("/data/d", "w");
+  // log_e("list cleared");
+  File root = LittleFS.open("/data/d");
+  // log_e("dir d opened");
   File file = root.openNextFile();
   // Not sure that we could take always the first file of openNextFile()
+  // log_e("Starting list");
   while (file) {
-    if (file.isDirectory())
+    if (file.isDirectory()){
+      file = root.openNextFile();
       continue;
+    }
+    // log_e("Got file %s",file.name());
     DataFile datafile;
     strcpy(datafile.filename, file.name());
-    datafile.tsstart = (time_t)atol(strrchr(file.name(), '/') + 1);
+    // datafile.tsstart = (time_t)atol(strrchr(file.name(), '/') + 1);
+    datafile.tsstart = (time_t)atol(file.name());
     datafile.tsdiff = getLastTsDiff(file);
     datafile.tsend = datafile.tsstart + datafile.tsdiff;
     datafile.nval = file.size() / sizeof(struct Datapoint);
     fileList.push_back(datafile);
+    // log_e("Done with file %s",file.name());
     file = root.openNextFile();
   }
   file.close();
+  log_e("End list");
+  
+  
 }
 
 void Storage::getFileList(char* buffer) {

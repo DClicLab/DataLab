@@ -27,7 +27,7 @@ class DHT12Sensor : public CSensor {
 
   void begin() {
     // Wire.begin(_sda, _scl);
-
+    Serial.printf("Starting DHT12 with Wire as %d %d and addres to ");
     dht12.begin();
     // pinMode(pin, OUTPUT);
     
