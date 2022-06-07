@@ -1,18 +1,27 @@
 import React from 'react';
 
-import { Paper, Typography } from '@mui/material';
+import { Typography, Paper } from '@material-ui/core';
+import { createStyles, Theme, makeStyles } from '@material-ui/core/styles';
 
-import { RequiredChildrenProps } from '../utils';
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    content: {
+      padding: theme.spacing(2),
+      margin: theme.spacing(3),
+    }
+  })
+);
 
-interface SectionContentProps extends RequiredChildrenProps {
+interface SectionContentProps {
   title: string;
   titleGutter?: boolean;
 }
 
 const SectionContent: React.FC<SectionContentProps> = (props) => {
   const { children, title, titleGutter } = props;
+  const classes = useStyles();
   return (
-    <Paper sx={{ p: 2, m: 2 }}>
+    <Paper className={classes.content}>
       <Typography variant="h6" gutterBottom={titleGutter}>
         {title}
       </Typography>

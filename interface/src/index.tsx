@@ -1,15 +1,13 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { render } from 'react-dom';
 
-import { BrowserRouter } from 'react-router-dom';
+import history from './history';
+import { Router } from 'react-router';
 
 import App from './App';
 
-ReactDOM.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+render((
+  <Router history={history}>
+    <App/>
+  </Router>
+), document.getElementById("root"))
