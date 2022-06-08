@@ -74,29 +74,23 @@ class SensorForm extends React.Component<SensorFormProps> {
           fullWidth
           variant="outlined"
           native="true"
-          // value={driverlist.indexOf(sensor.driver)}
           value={  driverlist.map(e => e.name).indexOf(sensor.driver.name)}
           onChange={handleDriverChange()}
           margin="normal"
         >
-          {/* <MenuItem disabled>Driver...</MenuItem> */}
           {driverlist.map((key,index:number) => (
-    <MenuItem key={sensor.name + key.name} value={index}>{key.name}</MenuItem>
+            
+    <MenuItem key={sensor.name + key.name} value={index}>{key.name + (key.i2c?" (I2C)": "")}</MenuItem>
           ))}
 
         </SelectValidator>
-        {        (sensor.driver.config && Object.keys(sensor.driver.config as Object).map(v => v.toLowerCase()).join().indexOf("sda")>=0 )?
-                  <Typography>SDA, SDC pins available on M5Stick: 0,26 or 32,33.<br/>Only ONE I2C bus can be set for ALL sensors.</Typography>:""
-        }
           {
-          
           sensor.driver.config && Object.entries(sensor.driver.config as Object).map(([key ,value]) => {
            return <TextValidator label={key} name={sensor.name+key} key={sensor.name+key} value={value} onChange={handleParamChange(key)} />
           })
-          
         }
             <TextValidator
-              validators={['required', 'matchRegexp:^[0-9]+[msh]?$']}
+              validators={['required', 'matchRegexp:^[0-9]+[msh]?$', 'minNumber:1']}
               errorMessages={['This field is required',"Wrong format: number in sec -- or use 'm' or 'h'"]}
               // validators={['required', 'minNumber:1', 'maxNumber:65000'] }
               name="interval"
