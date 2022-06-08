@@ -204,7 +204,7 @@ class ManageSensorsForm extends React.Component<ManageSensorsFormProps, ManageSe
           this.props.enqueueSnackbar("Delete all in progress. Refreshing page in 5 sec.", { variant: 'error' });
           this.setState({ processing: false, confirmReset: false });
           setTimeout(() => {
-            window.location.reload(false);
+            window.location.reload();
           }, 5000);
         } else {
           throw Error("Invalid status code: " + response.status);
