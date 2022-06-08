@@ -61,8 +61,8 @@ StateUpdateResult  SensorConfig::update(JsonObject& root, SensorConfig& settings
   else
     strncpy(i2cconf.conf,"Custom",8);
   i2cconf.enabled=root["i2c"]["enabled"];
-  i2cconf.sda=root["i2c"]["sda"]?root["i2c"]["sda"]:-1;
-  i2cconf.scl=root["i2c"]["scl"]?root["i2c"]["scl"]:-1;
+  i2cconf.sda=root["i2c"]["sda"].isNull()==false?root["i2c"]["sda"]:-1;
+  i2cconf.scl=root["i2c"]["scl"].isNull()==false?root["i2c"]["scl"]:-1;
 
   if (i2cconf.enabled){
     Serial.printf("I2C Enabled - starting i2c bus on sda:%d, scl:%d\n",i2cconf.sda,i2cconf.scl);
