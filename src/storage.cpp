@@ -135,9 +135,6 @@ void Storage::updateFileList() {
     file = root.openNextFile();
   }
   file.close();
-  log_e("End list");
-  
-  
 }
 
 void Storage::getFileList(char* buffer) {

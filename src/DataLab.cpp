@@ -78,20 +78,22 @@ DataLab::DataLab(AsyncWebServer* server, AsyncMqttClient* mqttClient, SensorSett
     request->send(response);
   });
 
+
+
   server->on("/rest/resetconf", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "", "OK Deleting");
-    request->onDisconnect([] {
+    request->onDisconnect([] { 
       LittleFS.open("/config/resetconf", "w");  // dealt with in begin()
       ESP.restart();
-    });
+     });
   });
 
   server->on("/rest/deleteall", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "", "OK Deleting");
-    request->onDisconnect([] {
+    request->onDisconnect([] { 
       LittleFS.open("/data/d/delete", "w");  // dealt with in begin()
       ESP.restart();
-    });
+     });
   });
 
   server->on("/rest/files/delete", HTTP_POST, [](AsyncWebServerRequest* request) {
@@ -203,11 +205,12 @@ void DataLab::start() {
       sensorList[i] = sensor;
       Serial.printf("Sensor %s is Enabled\n", sensor->name);
       sensor->begin();
-      if (sensor->interval) {
-        Serial.printf("Attaching Sensor %s, interval: %d\n", sensor->name, sensor->interval);
-        Serial.printf(" senor at %p \n", sensor);
-        ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
-      } else {
+      if (sensor->interval){
+      Serial.printf("Attaching Sensor %s, interval: %d\n", sensor->name, sensor->interval);
+      Serial.printf(" senor at %p \n", sensor);
+      ticks[i].attach<int>(sensor->interval, getValueForSensor, i);
+      }
+      else{
         Serial.println("ERROR - Not attaching sensor with interval 0s");
       }
       Serial.println("Done attaching sensor");
@@ -284,18 +287,14 @@ void DataLab::processPV(const char* keyname, time_t now, float val) {
   }
 
   _mqttClient->connect();
-  if (_mqttClient->connected()) {
+  if (_mqttClient->connected()){
     Serial.println("Mqtt is connectected. Sending data");
     char buffMqtt[250];
-    sprintf(buffMqtt, "{\"name\":\"%s\",\"val\":\"%g\"}}", keyname, val);
-
-    char topic[64];
-    snprintf(topic, 64, "v1/devices/dlab-%llX/telemetry", ESP.getEfuseMac());
-
-    _mqttClient->publish(topic, 0, false, buffMqtt);
-  } else {
-    Serial.println("Mqtt is NOT connectected.");
+    sprintf(buffMqtt,"{\"%s\":%g}" , keyname, val);
+    _mqttClient->publish("v1/devices/me/telemetry",0,false,buffMqtt);
   }
+  else
+    Serial.println("Mqtt is NOT connectected.");
 
   storage.store(keyname, now, val);
 }

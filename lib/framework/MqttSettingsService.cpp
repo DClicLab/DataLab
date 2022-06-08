@@ -110,7 +110,7 @@ void MqttSettingsService::onConfigUpdated() {
 #ifdef ESP32
 void MqttSettingsService::onStationModeGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
   if (_state.enabled) {
-    Serial.println(F("WiFi connection dropped, starting MQTT client."));
+    Serial.println(F("WiFi connection established, starting MQTT client."));
     onConfigUpdated();
   }
 }
@@ -142,8 +142,9 @@ void MqttSettingsService::configureMqtt() {
   _mqttClient.disconnect();
 
   // only connect if WiFi is connected and MQTT is enabled
-  if (_state.enabled && WiFi.isConnected()) {
-    Serial.println(F("Connecting to MQTT..."));
+  if (_state.enabled && WiFi.isConnected()      ) {
+    Serial.printf("Connecting to MQTT...\n");
+    
     _mqttClient.setServer(retainCstr(_state.host.c_str(), &_retainedHost), _state.port);
     if (_state.username.length() > 0) {
       _mqttClient.setCredentials(
